@@ -107,7 +107,7 @@ const Profile = () => {
               color: "#0F0C0A",
             }}
           >
-            LOGOUT
+            Yuh
           </Text>
         </Pressable>
       </View>
