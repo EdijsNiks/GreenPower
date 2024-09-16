@@ -14,6 +14,7 @@ import Profile from "../screens/Tabs/Profile";
 import CheckIn from "../screens/Tabs/CheckIn";
 import Tasks from "../screens/Tabs/Tasks";
 import Warehouse from "../screens/Tabs/Warehouse";
+import AdminPage from "../screens/Tabs/AdminPage";
 
 const StackNavigation = () => {
   const Stack = createNativeStackNavigator();
@@ -113,7 +114,11 @@ const StackNavigation = () => {
           component={Tasks}
           options={{ headerShown: false }}
         />
-
+        <Stack.Screen
+          name="AdminPage"
+          component={AdminPage}
+          options={{ headerShown: false }}
+        />
         <Stack.Screen
           name="Main"
           component={BottomTabs}
