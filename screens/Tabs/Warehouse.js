@@ -6,7 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 
-const Werehouse = () => {
+const Warehouse = () => {
   const navigation = useNavigation();
   const [user, setUserData] = useState([]);
   const [currentUser, setCurrentUser] = useState("");
@@ -115,6 +115,6 @@ const Werehouse = () => {
   );
 };
 
-export default Werehouse;
+export default Warehouse;
 
 const styles = StyleSheet.create({});
