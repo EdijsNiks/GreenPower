@@ -8,7 +8,7 @@ const { width } = Dimensions.get("window");
 const Profile = () => {
   const navigation = useNavigation();
   const [currentUser, setCurrentUser] = useState("");
-  const [isCheckedIn, setIsCheckedIn] = useState(false);
+  const [isCheckedIn, setIsCheckedIn] = useState(true);
   const [isPressed, setIsPressed] = useState(false);
   const [isAdmin, setIsAdmin] = useState(true); // New state for admin check
 
