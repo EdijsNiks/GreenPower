@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, Image, SafeAreaView, Dimensions } from "react-native";
+import { SafeAreaView, View, Text, Image, StyleSheet, Dimensions, TouchableOpacity, Alert  } from "react-native";
 import React, { useLayoutEffect, useState, useEffect } from "react";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -8,7 +8,9 @@ const { width } = Dimensions.get("window");
 
 const CheckIn = () => {
   const navigation = useNavigation();
-  const [currentUser, setCurrentUser] = useState("");
+  const [currentUser, setCurrentUser] = useState("Jeff");
+  const [checkedIn, setCheckedIn] = useState(false);
+
 
   /*
   useEffect(() => {
@@ -41,16 +43,37 @@ const CheckIn = () => {
     });
   }, [navigation]);
 
+  const handleCheckIn = () => {
+    Alert.alert("Check-In Successful");
+    setTimeout(() => {
+      setCheckedIn(true);
+    }, 2000); s
+  };
+
   return (
     
     <SafeAreaView style={styles.safeArea}>
+        {/* Navbar */}
       <View style={styles.navbar}>
         <Image source={require("../../assets/logo1.png")} style={styles.logo} />
         <Text style={styles.screenName}>CHECKIN</Text>
       </View>
-
+      {/* Profile Container */}
       <View style={styles.profileContainer}>
         <Text style={styles.profileText}>{currentUser}</Text>
+        <Text style={styles.checkInText}>Check in to work</Text>
+      
+
+      {/* Check-In Button */}
+      <TouchableOpacity
+        style={checkedIn ? styles.checkedInButton : styles.checkInButton}
+        onPress={handleCheckIn}
+        disabled={checkedIn}
+      >
+        <Text style={styles.buttonText}>
+          {checkedIn ? "You have checked in" : "Press to check in"}
+        </Text>
+      </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -90,9 +113,35 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   profileText: {
-    fontSize: 30,
+    fontSize: 40,
     fontWeight: "bold",
     color: "black",
+  },
+  checkInText: {
+    marginTop: 10,
+    fontSize: 40,
+    color: '#555',
+  },
+  checkInButton: {
+    marginTop: 40,
+    backgroundColor: 'red',
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  checkedInButton: {
+    marginTop: 40,
+    backgroundColor: 'green',
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });
 

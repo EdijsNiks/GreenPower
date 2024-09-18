@@ -79,10 +79,10 @@ const styles = StyleSheet.create({
     marginLeft: width * 0.15,
   },
   backButton: {
-    marginTop: 130,
-    width: 300,
+    marginTop: 120,
+    width: 140,
     paddingVertical: 15,
-    borderRadius: 20,
+    borderRadius: 10,
     alignItems: "center",
     backgroundColor: "#A4D337",
     shadowColor: "#000",

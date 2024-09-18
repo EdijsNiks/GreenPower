@@ -1,12 +1,12 @@
-import { StyleSheet , Image} from "react-native";
+import { StyleSheet, Image } from "react-native";
 import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { MaterialIcons } from "@expo/vector-icons";
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
-import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
+import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
+import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
 
 import Login from "../screens/LoginReg/Login";
 import Registration from "../screens/LoginReg/Registration";
@@ -15,6 +15,7 @@ import CheckIn from "../screens/Tabs/CheckIn";
 import Tasks from "../screens/Tabs/Tasks";
 import Warehouse from "../screens/Tabs/Warehouse";
 import AdminPage from "../screens/Tabs/AdminPage";
+import TasksItemInfo from "../screens/Tasks/TasksItemInfo";
 
 const StackNavigation = () => {
   const Stack = createNativeStackNavigator();
@@ -22,12 +23,12 @@ const StackNavigation = () => {
   function BottomTabs() {
     return (
       <Tab.Navigator>
-          <Tab.Screen
+        <Tab.Screen
           name="CheckIn"
           component={CheckIn}
           options={{
             tabBarLabel: "CheckIn",
-            tabBarLabelStyle: { color: "black", fontWeight: "bold"},
+            tabBarLabelStyle: { color: "black", fontWeight: "bold" },
             headerShown: false,
             tabBarIcon: ({ focused }) =>
               focused ? (
@@ -37,12 +38,12 @@ const StackNavigation = () => {
               ),
           }}
         />
-          <Tab.Screen
+        <Tab.Screen
           name="Tasks"
           component={Tasks}
           options={{
             tabBarLabel: "Tasks",
-            tabBarLabelStyle: { color: "black", fontWeight: "bold"},
+            tabBarLabelStyle: { color: "black", fontWeight: "bold" },
             headerShown: false,
             tabBarIcon: ({ focused }) =>
               focused ? (
@@ -52,12 +53,12 @@ const StackNavigation = () => {
               ),
           }}
         />
-          <Tab.Screen
+        <Tab.Screen
           name="Warehouse"
           component={Warehouse}
           options={{
             tabBarLabel: "Warehouse",
-            tabBarLabelStyle: { color: "black", fontWeight: "bold"},
+            tabBarLabelStyle: { color: "black", fontWeight: "bold" },
             headerShown: false,
             tabBarIcon: ({ focused }) =>
               focused ? (
@@ -67,12 +68,12 @@ const StackNavigation = () => {
               ),
           }}
         />
-          <Tab.Screen
+        <Tab.Screen
           name="Profile"
           component={Profile}
           options={{
             tabBarLabel: "Profile",
-            tabBarLabelStyle: { color: "black", fontWeight: "bold"},
+            tabBarLabelStyle: { color: "black", fontWeight: "bold" },
             headerShown: false,
             tabBarIcon: ({ focused }) =>
               focused ? (
@@ -112,6 +113,11 @@ const StackNavigation = () => {
         <Stack.Screen
           name="Tasks"
           component={Tasks}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="TasksItemInfo"
+          component={TasksItemInfo}
           options={{ headerShown: false }}
         />
         <Stack.Screen
