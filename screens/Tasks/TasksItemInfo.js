@@ -9,13 +9,14 @@ import {
   Dimensions,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
 
 const TasksItemInfo = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { taskId } = route.params;  // Get the task ID from the route params
+  const { taskId } = route.params; // Get the task ID from the route params
 
   // Fetch task details using taskId (static data for now)
   const task = {
@@ -27,52 +28,59 @@ const TasksItemInfo = () => {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Header Section */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>← BACK</Text>
-        </TouchableOpacity>
+    <SafeAreaView style={styles.container}>
+      {/* Navbar */}
+
+      <View style={styles.navbar}>
         <Image source={require("../../assets/logo1.png")} style={styles.logo} />
-        <Text style={styles.screenName}>TASKS</Text>
+        <Text style={styles.screenName}>TASK INFO</Text>
       </View>
 
-      {/* Task Info Section */}
-      <View style={styles.taskInfo}>
-        <Text style={styles.infoText}>NAME: {task.name}</Text>
-        <Text style={styles.infoText}>Category: {task.category}</Text>
-        <Text style={styles.infoText}>
-          Created by: {task.creator} at {task.date}
-        </Text>
-      </View>
-
-      {/* Buttons */}
-      <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.editButton}>
-          <Text style={styles.buttonText}>Edit Info</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.finishButton}>
-          <Text style={styles.buttonText}>Finish Task</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Task Description */}
-      <Text style={styles.description}>TASK DESCRIPTION</Text>
-      <Text>{task.description}</Text>
-
-      {/* Photos Section */}
-      <View style={styles.photosSection}>
-        <Text style={styles.photosTitle}>PHOTOS</Text>
-        <TouchableOpacity style={styles.addPhotoButton}>
-          <Text style={styles.buttonText}>Add Photo</Text>
-        </TouchableOpacity>
-        <View style={styles.photoGallery}>
-          <View style={styles.photo}></View>
-          <View style={styles.photo}></View>
-          <View style={styles.photo}></View>
+        <View
+          style={styles.backButtonContainer}
+        >
         </View>
-      </View>
-    </ScrollView>
+      <ScrollView>
+        {/* Task Info Section */}
+        <View style={styles.taskInfo}>
+          <Text style={styles.infoText}>NAME: {task.name}</Text>
+          <Text style={styles.infoText}>Category: {task.category}</Text>
+          <Text style={styles.infoText}>
+            Created by: {task.creator} at {task.date}
+          </Text>
+        </View>
+
+        {/* Buttons */}
+        <View style={styles.buttonRow}>
+        <TouchableOpacity style={styles.finishButton}>
+            <Text style={styles.buttonText} onPress={() => navigation.goBack()}>Go back</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.editButton}>
+            <Text style={styles.buttonText}>Edit Info</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.finishButton}>
+            <Text style={styles.buttonText}>Finish Task</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Task Description */}
+        <Text style={styles.description}>TASK DESCRIPTION</Text>
+        <Text>{task.description}</Text>
+
+        {/* Photos Section */}
+        <View style={styles.photosSection}>
+          <Text style={styles.photosTitle}>PHOTOS</Text>
+          <TouchableOpacity style={styles.addPhotoButton}>
+            <Text style={styles.buttonText}>Add Photo</Text>
+          </TouchableOpacity>
+          <View style={styles.photoGallery}>
+            <View style={styles.photo}></View>
+            <View style={styles.photo}></View>
+            <View style={styles.photo}></View>
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
@@ -160,6 +168,34 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     backgroundColor: "lightgray",
+  },
+  navbar: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: 110,
+    backgroundColor: "black",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 26,
+    paddingTop: 10,
+    zIndex: 1,
+  },
+  logo: {
+    width: 90,
+    height: 60,
+  },
+  screenName: {
+    color: "#A4D337",
+    fontSize: 30,
+    fontWeight: "bold",
+    marginLeft: width * 0.15,
+  },
+  backButtonContainer: {
+    padding: 10,
+    alignItems: 'center',
+    marginBottom: 50,
   },
 });
 

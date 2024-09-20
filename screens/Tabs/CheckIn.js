@@ -47,7 +47,7 @@ const CheckIn = () => {
     Alert.alert("Check-In Successful");
     setTimeout(() => {
       setCheckedIn(true);
-    }, 2000); s
+    }, 2000); 
   };
 
   return (
