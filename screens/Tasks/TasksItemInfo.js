@@ -65,14 +65,16 @@ const TasksItemInfo = () => {
 
         {/* Task Description */}
         <Text style={styles.description}>TASK DESCRIPTION</Text>
-        <Text>{task.description}</Text>
+        <Text style={styles.descriptionText}>{task.description}</Text>
 
         {/* Photos Section */}
         <View style={styles.photosSection}>
+        <View style={styles.photoRow}>
           <Text style={styles.photosTitle}>PHOTOS</Text>
           <TouchableOpacity style={styles.addPhotoButton}>
             <Text style={styles.buttonText}>Add Photo</Text>
           </TouchableOpacity>
+          </View>
           <View style={styles.photoGallery}>
             <View style={styles.photo}></View>
             <View style={styles.photo}></View>
@@ -123,6 +125,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-around",
     marginVertical: 20,
   },
+  photoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginVertical: 20,
+
+  },
   editButton: {
     backgroundColor: "#A4D337",
     paddingVertical: 10,
@@ -141,6 +149,12 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 18,
+    marginHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  descriptionText: {
+    fontSize: 14,
     marginHorizontal: 20,
     marginTop: 20,
     marginBottom: 10,

@@ -10,7 +10,6 @@ import {
   TouchableOpacity,
   FlatList,
   Modal,
-  Button,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -33,7 +32,7 @@ const Tasks = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredTaskList, setFilteredTaskList] = useState([]);
   const [isFilterModalVisible, setFilterModalVisible] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedCategories, setSelectedCategories] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const tasksPerPage = 10;
 
@@ -74,10 +73,28 @@ const Tasks = () => {
   };
 
   const handleFilter = (category) => {
-    setSelectedCategory(category);
-    const filteredData = tasksData.filter((task) => task.category === category);
+    if (selectedCategories.includes(category)) {
+      // If already selected, remove it
+      setSelectedCategories(
+        selectedCategories.filter((cat) => cat !== category)
+      );
+    } else {
+      // Otherwise, add it
+      setSelectedCategories([...selectedCategories, category]);
+    }
+
+    const filteredData = tasksData.filter(
+      (task) =>
+        selectedCategories.includes(task.category) || task.category === category
+    );
     setTaskList(filteredData);
-    setFilterModalVisible(false);
+    // Don't close modal
+  };
+
+  const clearSelection = () => {
+    setSelectedCategories([]);
+    setTaskList(tasksData); // Reset task list to original data
+    setFilterModalVisible(false); // Optionally close the modal when clearing selection
   };
 
   const renderTaskItem = ({ item }) => (
@@ -176,13 +193,51 @@ const Tasks = () => {
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Select Category</Text>
-            <Button title="Work" onPress={() => handleFilter("Work")} />
-            <Button title="Personal" onPress={() => handleFilter("Personal")} />
-            <Button
-              title="Close"
-              onPress={() => setFilterModalVisible(false)}
-              color="red"
-            />
+            <View style={styles.buttonWrapper}>
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  selectedCategories.includes("Work") && styles.selectedButton,
+                ]}
+                onPress={() => handleFilter("Work")}
+              >
+                <Text style={styles.buttonText}>Work</Text>
+              </TouchableOpacity>
+              {selectedCategories.includes("Work") && (
+                <Text style={styles.indicator}>✔</Text>
+              )}
+            </View>
+            <View style={styles.buttonWrapper}>
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  selectedCategories.includes("Personal") &&
+                    styles.selectedButton,
+                ]}
+                onPress={() => handleFilter("Personal")}
+              >
+                <Text style={styles.buttonText}>Personal</Text>
+              </TouchableOpacity>
+              {selectedCategories.includes("Personal") && (
+                <Text style={styles.indicator}>✔</Text>
+              )}
+            </View>
+
+            {/* Clear and Close buttons in the same row */}
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={clearSelection}
+              >
+                <Text style={styles.clearButtonText}>Clear Selection</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setFilterModalVisible(false)}
+              >
+                <Text style={styles.closeButtonText}>Close</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -194,6 +249,58 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "white",
+  },
+  buttonWrapper: {
+    marginBottom: 10,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  button: {
+    flex: 1,
+    padding: 15,
+    backgroundColor: "#A4D337",
+    borderRadius: 5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 10,
+  },
+  clearButton: {
+    padding: 15,
+    backgroundColor: "black", // Clear button color
+    borderRadius: 5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  clearButtonText: {
+    color: "#A4D337", // Clear button text color
+    fontSize: 16,
+  },
+  selectedButton: {
+    backgroundColor: "#8DBA30", // Darker green for selected button
+  },
+  buttonText: {
+    color: "white",
+    fontSize: 16,
+  },
+  indicator: {
+    marginLeft: 10,
+    color: "#A4D337",
+    fontSize: 18,
+  },
+  closeButton: {
+    padding: 15,
+    backgroundColor: "black",
+    borderRadius: 5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  closeButtonText: {
+    color: "#A4D337",
+    fontSize: 16,
   },
   navbar: {
     position: "absolute",
