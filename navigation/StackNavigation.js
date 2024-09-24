@@ -1,22 +1,32 @@
-import { StyleSheet } from 'react-native';
-import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-import { MaterialIcons } from '@expo/vector-icons';
-import { Ionicons } from '@expo/vector-icons'; 
+import { StyleSheet, Image } from "react-native";
+import React from "react";
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { MaterialIcons } from "@expo/vector-icons";
+import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
+import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
 
-import Login from '../screens/LoginReg/Login';
-import Registration from '../screens/LoginReg/Registration';
-import Profile from '../screens/Tabs/Profile';
-import CheckIn from '../screens/Tabs/CheckIn';
-import Tasks from '../screens/Tabs/Tasks';
-import Werehouse from '../screens/Tabs/Werehouse';
+// Import your screens
+import Login from "../screens/LoginReg/Login";
+import Registration from "../screens/LoginReg/Registration";
+import Profile from "../screens/Tabs/Profile";
+import CheckIn from "../screens/Tabs/CheckIn";
+import Tasks from "../screens/Tabs/Tasks";
+import Warehouse from "../screens/Tabs/Warehouse";
+import AdminPage from "../screens/Tabs/AdminPage";
+import TasksItemInfo from "../screens/Tasks/TasksItemInfo";
+import ViewAll from "../screens/ViewAll";
+import WarehouseItemInfo from "../screens/Warehouse/WarehouseItemInfo";
+import AddItemToWarehouse from "../screens/Warehouse/AddItemToWarehouse";
+import AddItemToTasks from "../screens/Tasks/AddItemToTasks";
 
 const StackNavigation = () => {
-
   const Stack = createNativeStackNavigator();
   const Tab = createBottomTabNavigator();
+
+  // Bottom tab navigation
   function BottomTabs() {
     return (
       <Tab.Navigator>
@@ -24,44 +34,44 @@ const StackNavigation = () => {
           name="CheckIn"
           component={CheckIn}
           options={{
-            tabBarLabel: "Explore",
-            tabBarLabelStyle: { color: "#008E97" },
+            tabBarLabel: "CheckIn",
+            tabBarLabelStyle: { color: "black", fontWeight: "bold" },
             headerShown: false,
             tabBarIcon: ({ focused }) =>
               focused ? (
-                <MaterialIcons name="explore" size={24} color="grey" />
+                <MaterialIcons name="home" size={24} color="grey" />
               ) : (
-                <MaterialIcons name="explore" size={24} color="black" />
+                <MaterialIcons name="home" size={24} color="black" />
               ),
           }}
         />
-          <Tab.Screen
+        <Tab.Screen
           name="Tasks"
           component={Tasks}
           options={{
-            tabBarLabel: "Explore",
-            tabBarLabelStyle: { color: "#008E97" },
+            tabBarLabel: "Tasks",
+            tabBarLabelStyle: { color: "black", fontWeight: "bold" },
             headerShown: false,
             tabBarIcon: ({ focused }) =>
               focused ? (
-                <MaterialIcons name="explore" size={24} color="grey" />
+                <FontAwesome5 name="tasks" size={24} color="grey" />
               ) : (
-                <MaterialIcons name="explore" size={24} color="black" />
+                <FontAwesome5 name="tasks" size={24} color="black" />
               ),
           }}
         />
-          <Tab.Screen
-          name="Werehouse"
-          component={Werehouse}
+        <Tab.Screen
+          name="Warehouse"
+          component={Warehouse}
           options={{
-            tabBarLabel: "Explore",
-            tabBarLabelStyle: { color: "#008E97" },
+            tabBarLabel: "Warehouse",
+            tabBarLabelStyle: { color: "black", fontWeight: "bold" },
             headerShown: false,
             tabBarIcon: ({ focused }) =>
               focused ? (
-                <MaterialIcons name="explore" size={24} color="grey" />
+                <FontAwesome6 name="warehouse" size={24} color="grey" />
               ) : (
-                <MaterialIcons name="explore" size={24} color="black" />
+                <FontAwesome6 name="warehouse" size={24} color="black" />
               ),
           }}
         />
@@ -70,34 +80,130 @@ const StackNavigation = () => {
           component={Profile}
           options={{
             tabBarLabel: "Profile",
-            tabBarLabelStyle: { color: "#008E97" },
+            tabBarLabelStyle: { color: "black", fontWeight: "bold" },
+            headerShown: false,
             tabBarIcon: ({ focused }) =>
               focused ? (
-                <Ionicons name="person" size={24} color="grey" />
+                <FontAwesome name="user" size={24} color="grey" />
               ) : (
-                <Ionicons name="person" size={24} color="black" />
+                <FontAwesome name="user" size={24} color="black" />
               ),
           }}
         />
       </Tab.Navigator>
     );
   }
+
+  // Linking configuration
+  const linking = {
+    prefixes: ["https://myapp.vercel.app", "myapp://"],
+    config: {
+      screens: {
+        Login: "login",
+        Registration: "registration",
+        Main: {
+          path: "main",
+          screens: {
+            CheckIn: "checkin",
+            Tasks: {
+              path: "tasks",
+              screens: {
+                TasksHome: "",
+              //  TasksItemInfo: "item-info",
+                AddItemToTasks: "add-item",
+              },
+            },
+            Warehouse: {
+              path: "warehouse",
+              screens: {
+                WarehouseHome: "",
+               // WarehouseItemInfo: "item-info",
+                AddItemToWarehouse: "add-item",
+              },
+            },
+            Profile: "profile",
+          },
+        },
+        Profile: "profile",
+        TasksItemInfo: "tasks/item-info",
+        AdminPage: "admin",
+        ViewAll: "view-all",
+        WarehouseItemInfo: "warehouse/item-info",
+
+      },
+    },
+  };
+
+  // Stack navigation with linking
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking}>
       <Stack.Navigator>
-        <Stack.Screen name="Login" component={Login} options={{headerShown:false}} />
-        <Stack.Screen name="Registration" component={Registration} options={{headerShown:false}} />
-        <Stack.Screen name="Profile" component={Profile}/>
-        <Stack.Screen name="CheckIn" component={CheckIn} options={{headerShown:false}} />
-        <Stack.Screen name="Werehouse" component={Werehouse} options={{headerShown:false}} />
-        <Stack.Screen name="Tasks" component={Tasks} options={{headerShown:false}} />
-        
-        <Stack.Screen name="Main" component={BottomTabs} options={{headerShown:false}} />
+        <Stack.Screen
+          name="Login"
+          component={Login}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Registration"
+          component={Registration}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen name="Profile" component={Profile} />
+        <Stack.Screen
+          name="CheckIn"
+          component={CheckIn}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Warehouse"
+          component={Warehouse}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Tasks"
+          component={Tasks}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="TasksItemInfo"
+          component={TasksItemInfo}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="WarehouseItemInfo"
+          component={WarehouseItemInfo}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="AdminPage"
+          component={AdminPage}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="AddItemToTasks"
+          component={AddItemToTasks}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="AddItemToWarehouse"
+          component={AddItemToWarehouse}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="ViewAll"
+          component={ViewAll}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Main"
+          component={BottomTabs}
+          options={{ headerShown: false }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
-  )
-}
+  );
+};
 
 export default StackNavigation;
 
-const styles = StyleSheet.create({})
+const styles = StyleSheet.create({});

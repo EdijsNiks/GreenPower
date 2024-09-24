@@ -1,116 +1,151 @@
-import { StyleSheet, Text, View, Image, Pressable, Button } from "react-native";
-import { React, useLayoutEffect, useState, useEffect } from "react";
+import {
+  SafeAreaView,
+  View,
+  Text,
+  Image,
+  StyleSheet,
+  Dimensions,
+  TouchableOpacity,
+  Alert,
+} from "react-native";
+import React, { useLayoutEffect, useState, useEffect } from "react";
 import { useNavigation } from "@react-navigation/native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-
+const { width } = Dimensions.get("window");
 
 const CheckIn = () => {
   const navigation = useNavigation();
-  const [user, setUserData] = useState([]);
-  const [currentUser, setCurrentUser] = useState("");
-
-/*
-  useEffect(() => {
-    fetch('http://rhomeserver.ddns.net:8086/api/client/get/all')
-    .then(res => res.json())
-    .then(data => setUserData(data))
-    .catch(err => console.log(err));
-    console.log(user);
-  }, []);
-
-*/
+  const [currentUser, setCurrentUser] = useState("Jeff");
+  const [checkedIn, setCheckedIn] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem('myKey')
-    .then((stringifiedData) => {
-      if (stringifiedData !== null) {
-        const data = JSON.parse(stringifiedData);
-        console.log('User data retrieved from AsyncStorage:', data);
-        setCurrentUser(data); 
-        console.log(currentUser)// Update the state with the data
-      }
-    })
-    .catch((error) => {
-      console.error('Error retrieving data:', error);
-    });
+    AsyncStorage.getItem("myKey")
+      .then((stringifiedData) => {
+        if (stringifiedData !== null) {
+          const data = JSON.parse(stringifiedData);
+          console.log("User data retrieved from AsyncStorage:", data);
+          setCurrentUser(data);
+        }
+      })
+      .catch((error) => {
+        console.error("Error retrieving data:", error);
+      });
   }, []);
 
   useLayoutEffect(() => {
     navigation.setOptions({
       headerShown: false,
     });
-  }, []);
+  }, [navigation]);
+
+  const handleCheckIn = () => {
+    if (checkedIn) {
+      // If the user is already checked in, check out
+      Alert.alert("You have checked out.");
+      setTimeout(() => {
+        setCheckedIn(false); // Set back to unchecked state
+      }, 500);
+    } else {
+      // If the user is not checked in, check in
+      Alert.alert("Check-In Successful");
+      setTimeout(() => {
+        setCheckedIn(true); // Set to checked-in state
+      }, 500);
+    }
+  };
 
   return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: "white", alignItems: "center" }}
-    >
-      <View
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "20%",
-          backgroundColor: "orange",
-        }}
-      >
-        <Image source={require("../../assets/favicon.png")} />
-      </View>
-      <View style={{ top: 130 }}>
-        <Text style={{ color: "white", fontSize: 50 }}>Profile</Text>
+    <SafeAreaView style={styles.safeArea}>
+      {/* Navbar */}
+      <View style={styles.navbar}>
+        <Image source={require("../../assets/logo1.png")} style={styles.logo} />
+        <Text style={styles.screenName}>CHECKIN</Text>
       </View>
 
-      <View style={{ alignItems: "center" }}>
-        <Text
-          style={{
-            fontSize: 30,
-            marginTop: 300,
-            width: 350,
-            fontWeight: "bold",
-            alignItems: "center",
-            left: 84,
-          }}
+      {/* Profile Container */}
+      <View style={styles.profileContainer}>
+        <Text style={styles.profileText}>{currentUser}</Text>
+        <Text style={styles.checkInText}>Check in to work</Text>
+
+        {/* Check-In Button */}
+        <TouchableOpacity
+          style={checkedIn ? styles.checkedInButton : styles.checkInButton}
+          onPress={handleCheckIn}
         >
-        {currentUser}
-        </Text>
-
-      </View>
-
-      <View style={{paddingVertical: 40 }}>
-        <Pressable
-          onPress={() => navigation.replace("Login")}
-          style={{
-            alignItems: "center",
-            justifyContent: "center",
-            paddingVertical: 11,
-            paddingHorizontal: 54,
-            borderRadius: 12,
-            elevation: 2,
-            backgroundColor: "#E7DFDA",
-           
-            shadowColor: "#0F0C0A",
-          }}
-        >
-          <Text
-            style={{
-              fontSize: 13,
-              lineHeight: 16,
-              fontWeight: "bold",
-              letterSpacing: 0.25,
-              color: "#0F0C0A",
-            }}
-          >
-            LOGOUT
+          <Text style={styles.buttonText}>
+            {checkedIn ? "Press to check out" : "Press to check in"}
           </Text>
-        </Pressable>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 };
 
-export default CheckIn;
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "white",
+  },
+  navbar: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: 110,
+    backgroundColor: "black",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 26,
+    paddingTop: 10,
+    zIndex: 1,
+  },
+  logo: {
+    width: 90,
+    height: 60,
+  },
+  screenName: {
+    color: "#A4D337",
+    fontSize: 30,
+    fontWeight: "bold",
+    marginLeft: width * 0.15,
+  },
+  profileContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  profileText: {
+    fontSize: 40,
+    fontWeight: "bold",
+    color: "black",
+  },
+  checkInText: {
+    marginTop: 10,
+    fontSize: 40,
+    color: "#555",
+  },
+  checkInButton: {
+    marginTop: 40,
+    backgroundColor: "red",
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: 5,
+    alignItems: "center",
+  },
+  checkedInButton: {
+    marginTop: 40,
+    backgroundColor: "green",
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: 5,
+    alignItems: "center",
+  },
+  buttonText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+});
 
-const styles = StyleSheet.create({});
+export default CheckIn;
