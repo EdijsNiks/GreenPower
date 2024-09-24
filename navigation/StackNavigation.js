@@ -8,6 +8,7 @@ import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 
+// Import your screens
 import Login from "../screens/LoginReg/Login";
 import Registration from "../screens/LoginReg/Registration";
 import Profile from "../screens/Tabs/Profile";
@@ -17,10 +18,15 @@ import Warehouse from "../screens/Tabs/Warehouse";
 import AdminPage from "../screens/Tabs/AdminPage";
 import TasksItemInfo from "../screens/Tasks/TasksItemInfo";
 import ViewAll from "../screens/ViewAll";
+import WarehouseItemInfo from "../screens/Warehouse/WarehouseItemInfo";
+import AddItemToWarehouse from "../screens/Warehouse/AddItemToWarehouse";
+import AddItemToTasks from "../screens/Tasks/AddItemToTasks";
 
 const StackNavigation = () => {
   const Stack = createNativeStackNavigator();
   const Tab = createBottomTabNavigator();
+
+  // Bottom tab navigation
   function BottomTabs() {
     return (
       <Tab.Navigator>
@@ -87,8 +93,50 @@ const StackNavigation = () => {
       </Tab.Navigator>
     );
   }
+
+  // Linking configuration
+  const linking = {
+    prefixes: ["https://myapp.vercel.app", "myapp://"],
+    config: {
+      screens: {
+        Login: "login",
+        Registration: "registration",
+        Main: {
+          path: "main",
+          screens: {
+            CheckIn: "checkin",
+            Tasks: {
+              path: "tasks",
+              screens: {
+                TasksHome: "",
+              //  TasksItemInfo: "item-info",
+                AddItemToTasks: "add-item",
+              },
+            },
+            Warehouse: {
+              path: "warehouse",
+              screens: {
+                WarehouseHome: "",
+               // WarehouseItemInfo: "item-info",
+                AddItemToWarehouse: "add-item",
+              },
+            },
+            Profile: "profile",
+          },
+        },
+        Profile: "profile",
+        TasksItemInfo: "tasks/item-info",
+        AdminPage: "admin",
+        ViewAll: "view-all",
+        WarehouseItemInfo: "warehouse/item-info",
+
+      },
+    },
+  };
+
+  // Stack navigation with linking
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking}>
       <Stack.Navigator>
         <Stack.Screen
           name="Login"
@@ -122,8 +170,23 @@ const StackNavigation = () => {
           options={{ headerShown: false }}
         />
         <Stack.Screen
+          name="WarehouseItemInfo"
+          component={WarehouseItemInfo}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
           name="AdminPage"
           component={AdminPage}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="AddItemToTasks"
+          component={AddItemToTasks}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="AddItemToWarehouse"
+          component={AddItemToWarehouse}
           options={{ headerShown: false }}
         />
         <Stack.Screen
@@ -131,7 +194,6 @@ const StackNavigation = () => {
           component={ViewAll}
           options={{ headerShown: false }}
         />
-
         <Stack.Screen
           name="Main"
           component={BottomTabs}

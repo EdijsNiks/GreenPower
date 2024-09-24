@@ -152,7 +152,10 @@ const Tasks = () => {
           value={searchQuery}
           onChangeText={handleSearch}
         />
-        <TouchableOpacity style={styles.addButton}>
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => navigation.navigate("Tasks", {screen: "AddItemToTasks"})}
+        >
           <Text style={styles.addButtonText}>Add Task</Text>
         </TouchableOpacity>
       </View>
@@ -375,9 +378,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    paddingVertical: 20,
+    borderBottomWidth: 3,
+    borderBottomColor: "black",
   },
   taskLeft: {
     flexDirection: "row",

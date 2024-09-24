@@ -99,7 +99,9 @@ const Warehouse = () => {
 
   const renderTaskItem = ({ item }) => (
     <TouchableOpacity
-      onPress={() => navigation.navigate("WarehouseItemInfo", { taskId: item.id })}
+      onPress={() =>
+        navigation.navigate("WarehouseItemInfo", { taskId: item.id })
+      }
     >
       <View style={styles.taskItem}>
         <View style={styles.taskLeft}>
@@ -107,7 +109,7 @@ const Warehouse = () => {
           <Text style={styles.taskTitle}>{item.title}</Text>
         </View>
         <View style={styles.taskRight}>
-        <Text>Count: 10</Text>
+          <Text>Count: 10</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -146,7 +148,9 @@ const Warehouse = () => {
           value={searchQuery}
           onChangeText={handleSearch}
         />
-        <TouchableOpacity style={styles.addButton}>
+        <TouchableOpacity style={styles.addButton}
+        onPress={() => navigation.navigate("Warehouse", {screenName: "AddItemToWarehouse"})}
+        >
           <Text style={styles.addButtonText}>Add Item</Text>
         </TouchableOpacity>
       </View>
@@ -201,6 +205,7 @@ const Warehouse = () => {
                 <Text style={styles.indicator}>✔</Text>
               )}
             </View>
+
             <View style={styles.buttonWrapper}>
               <TouchableOpacity
                 style={[
@@ -213,6 +218,71 @@ const Warehouse = () => {
                 <Text style={styles.buttonText}>Generators</Text>
               </TouchableOpacity>
               {selectedCategories.includes("Generators") && (
+                <Text style={styles.indicator}>✔</Text>
+              )}
+            </View>
+
+            {/* New Categories */}
+            <View style={styles.buttonWrapper}>
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  selectedCategories.includes("MILITARY EQUIPMENT") &&
+                    styles.selectedButton,
+                ]}
+                onPress={() => handleFilter("MILITARY EQUIPMENT")}
+              >
+                <Text style={styles.buttonText}>MILITARY EQUIPMENT</Text>
+              </TouchableOpacity>
+              {selectedCategories.includes("MILITARY EQUIPMENT") && (
+                <Text style={styles.indicator}>✔</Text>
+              )}
+            </View>
+
+            <View style={styles.buttonWrapper}>
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  selectedCategories.includes("METALWORKING") &&
+                    styles.selectedButton,
+                ]}
+                onPress={() => handleFilter("METALWORKING")}
+              >
+                <Text style={styles.buttonText}>METALWORKING</Text>
+              </TouchableOpacity>
+              {selectedCategories.includes("METALWORKING") && (
+                <Text style={styles.indicator}>✔</Text>
+              )}
+            </View>
+
+            <View style={styles.buttonWrapper}>
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  selectedCategories.includes("MOBILE BASE STATIONS") &&
+                    styles.selectedButton,
+                ]}
+                onPress={() => handleFilter("MOBILE BASE STATIONS")}
+              >
+                <Text style={styles.buttonText}>MOBILE BASE STATIONS</Text>
+              </TouchableOpacity>
+              {selectedCategories.includes("MOBILE BASE STATIONS") && (
+                <Text style={styles.indicator}>✔</Text>
+              )}
+            </View>
+
+            <View style={styles.buttonWrapper}>
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  selectedCategories.includes("TRAILERS") &&
+                    styles.selectedButton,
+                ]}
+                onPress={() => handleFilter("TRAILERS")}
+              >
+                <Text style={styles.buttonText}>TRAILERS</Text>
+              </TouchableOpacity>
+              {selectedCategories.includes("TRAILERS") && (
                 <Text style={styles.indicator}>✔</Text>
               )}
             </View>
@@ -369,9 +439,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    paddingVertical: 20,
+    borderBottomWidth: 3,
+    borderBottomColor: "black",
   },
   taskLeft: {
     flexDirection: "row",

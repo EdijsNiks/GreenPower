@@ -26,6 +26,7 @@ const TasksItemInfo = () => {
     date: "03.09.2024 09:40",
     description: "Task description here...",
   };
+  
 
   return (
     <SafeAreaView style={styles.container}>
@@ -53,7 +54,7 @@ const TasksItemInfo = () => {
         {/* Buttons */}
         <View style={styles.buttonRow}>
         <TouchableOpacity style={styles.finishButton}>
-            <Text style={styles.buttonText} onPress={() => navigation.goBack()}>Go back</Text>
+            <Text style={styles.buttonText} onPress={() => navigation.navigate("Main", {screen: "Tasks"})}>Go back</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.editButton}>
             <Text style={styles.buttonText}>Edit Info</Text>
@@ -122,8 +123,9 @@ const styles = StyleSheet.create({
   },
   buttonRow: {
     flexDirection: "row",
-    justifyContent: "space-around",
+    justifyContent: "space-between",
     marginVertical: 20,
+    marginHorizontal: 20,
   },
   photoRow: {
     flexDirection: "row",
@@ -207,7 +209,7 @@ const styles = StyleSheet.create({
     marginLeft: width * 0.15,
   },
   backButtonContainer: {
-    padding: 10,
+    padding: 25,
     alignItems: 'center',
     marginBottom: 50,
   },
