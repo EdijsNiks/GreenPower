@@ -34,7 +34,9 @@ const ProjectsInfo = () => {
   ];
 
   const onAdd = (item) => {
-    setReservedItems([...reservedItems, item]);
+    // Adding the project ID when reserving an item
+    const reservedItem = { ...item, projectId: taskId };
+    setReservedItems([...reservedItems, reservedItem]);
   };
 
   const onRemove = (itemId) => {

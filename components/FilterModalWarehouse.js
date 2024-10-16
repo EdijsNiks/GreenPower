@@ -1,0 +1,114 @@
+// FilterModal.js
+import React from "react";
+import { View, Text, TouchableOpacity, Modal, StyleSheet } from "react-native";
+
+const FilterModalWarehouse = ({
+  isVisible,
+  onClose,
+  selectedCategories,
+  handleFilter,
+  clearSelection,
+}) => {
+  return (
+    <Modal visible={isVisible} transparent={true} animationType="slide">
+      <View style={styles.modalContainer}>
+        <View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>Select Category</Text>
+
+          {["UPS", "Generators", "MILITARY EQUIPMENT", "METALWORKING", "MOBILE BASE STATIONS", "TRAILERS"].map((category) => (
+            <View style={styles.buttonWrapper} key={category}>
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  selectedCategories.includes(category) && styles.selectedButton,
+                ]}
+                onPress={() => handleFilter(category)}
+              >
+                <Text style={styles.buttonText}>{category}</Text>
+              </TouchableOpacity>
+              {selectedCategories.includes(category) && (
+                <Text style={styles.indicator}>✔</Text>
+              )}
+            </View>
+          ))}
+
+          {/* Clear and Close buttons in the same row */}
+          <View style={styles.buttonRow}>
+            <TouchableOpacity style={styles.clearButton} onPress={clearSelection}>
+              <Text style={styles.clearButtonText}>Clear Selection</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+              <Text style={styles.closeButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+const styles = StyleSheet.create({
+  modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  modalContent: {
+    backgroundColor: "white",
+    borderRadius: 10,
+    padding: 20,
+    margin: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  buttonWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 5,
+  },
+  button: {
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "gray",
+    borderRadius: 5,
+    flex: 1,
+  },
+  selectedButton: {
+    backgroundColor: "#A4D337",
+  },
+  buttonText: {
+    textAlign: "center",
+  },
+  indicator: {
+    marginLeft: 10,
+    color: "green",
+  },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 20,
+  },
+  clearButton: {
+    backgroundColor: "red",
+    padding: 10,
+    borderRadius: 5,
+  },
+  closeButton: {
+    backgroundColor: "#A4D337",
+    padding: 10,
+    borderRadius: 5,
+  },
+  clearButtonText: {
+    color: "white",
+    textAlign: "center",
+  },
+  closeButtonText: {
+    color: "white",
+    textAlign: "center",
+  },
+});
+
+export default FilterModalWarehouse;

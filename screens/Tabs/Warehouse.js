@@ -10,11 +10,13 @@ import {
   TouchableOpacity,
   FlatList,
   Modal,
+  Button,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import Fontisto from "@expo/vector-icons/Fontisto";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
+import FilterModalWarehouse from "../../components/FilterModalWarehouse";
+import QRCodeScannerComponent from "./QRCodeScannerComponent";
 
 const { width } = Dimensions.get("window");
 
@@ -35,6 +37,9 @@ const Warehouse = () => {
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const tasksPerPage = 10;
+  const [isAddItemModalVisible, setAddItemModalVisible] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const [scannedData, setScannedData] = useState("");
 
   useEffect(() => {
     AsyncStorage.getItem("myKey")
@@ -49,7 +54,6 @@ const Warehouse = () => {
         console.error("Error retrieving data:", error);
       });
   }, []);
-
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -81,13 +85,21 @@ const Warehouse = () => {
         selectedCategories.includes(task.category) || task.category === category
     );
     setTaskList(filteredData);
-    // Don't close modal
   };
 
   const clearSelection = () => {
     setSelectedCategories([]);
     setTaskList(tasksData); // Reset task list to original data
     setFilterModalVisible(false); // Optionally close the modal when clearing selection
+  };
+
+  const handleQRCodeRead = (e) => {
+    setScannedData(e.data);
+    setIsScanning(false);
+  };
+
+  const handleAddItemPress = () => {
+    setAddItemModalVisible(true); // Open the add item modal
   };
 
   const renderTaskItem = ({ item }) => (
@@ -141,11 +153,43 @@ const Warehouse = () => {
           value={searchQuery}
           onChangeText={handleSearch}
         />
-        <TouchableOpacity style={styles.addButton}
-        onPress={() => navigation.navigate("Warehouse", {screenName: "AddItemToWarehouse"})}
-        >
-          <Text style={styles.addButtonText}>Add Item</Text>
-        </TouchableOpacity>
+        <View style={styles.container}>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={handleAddItemPress}
+          >
+            <Text style={styles.addButtonText}>Add Item</Text>
+          </TouchableOpacity>
+
+          {isScanning && <QRCodeScannerComponent onRead={handleQRCodeRead} />}
+
+          {/* Add Item Modal */}
+          <Modal
+            visible={isAddItemModalVisible}
+            transparent={true}
+            animationType="slide"
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Add New Item</Text>
+                {/* Add your form fields here */}
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="Item Title"
+                />
+                <Button title="Submit" onPress={() => setAddItemModalVisible(true)} />
+                <Button title="Cancel" onPress={() => setAddItemModalVisible(false)} />
+              </View>
+            </View>
+          </Modal>
+
+          {/* Display scanned data if available */}
+          {scannedData ? (
+            <Text style={styles.scannedDataText}>
+              Scanned Data: {scannedData}
+            </Text>
+          ) : null}
+        </View>
       </View>
 
       {/* Task List */}
@@ -175,129 +219,13 @@ const Warehouse = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Filter Modal */}
-      <Modal
-        visible={isFilterModalVisible}
-        transparent={true}
-        animationType="slide"
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Category</Text>
-            <View style={styles.buttonWrapper}>
-              <TouchableOpacity
-                style={[
-                  styles.button,
-                  selectedCategories.includes("UPS") && styles.selectedButton,
-                ]}
-                onPress={() => handleFilter("UPS")}
-              >
-                <Text style={styles.buttonText}>UPS</Text>
-              </TouchableOpacity>
-              {selectedCategories.includes("UPS") && (
-                <Text style={styles.indicator}>✔</Text>
-              )}
-            </View>
-
-            <View style={styles.buttonWrapper}>
-              <TouchableOpacity
-                style={[
-                  styles.button,
-                  selectedCategories.includes("Generators") &&
-                    styles.selectedButton,
-                ]}
-                onPress={() => handleFilter("Generators")}
-              >
-                <Text style={styles.buttonText}>Generators</Text>
-              </TouchableOpacity>
-              {selectedCategories.includes("Generators") && (
-                <Text style={styles.indicator}>✔</Text>
-              )}
-            </View>
-
-            {/* New Categories */}
-            <View style={styles.buttonWrapper}>
-              <TouchableOpacity
-                style={[
-                  styles.button,
-                  selectedCategories.includes("MILITARY EQUIPMENT") &&
-                    styles.selectedButton,
-                ]}
-                onPress={() => handleFilter("MILITARY EQUIPMENT")}
-              >
-                <Text style={styles.buttonText}>MILITARY EQUIPMENT</Text>
-              </TouchableOpacity>
-              {selectedCategories.includes("MILITARY EQUIPMENT") && (
-                <Text style={styles.indicator}>✔</Text>
-              )}
-            </View>
-
-            <View style={styles.buttonWrapper}>
-              <TouchableOpacity
-                style={[
-                  styles.button,
-                  selectedCategories.includes("METALWORKING") &&
-                    styles.selectedButton,
-                ]}
-                onPress={() => handleFilter("METALWORKING")}
-              >
-                <Text style={styles.buttonText}>METALWORKING</Text>
-              </TouchableOpacity>
-              {selectedCategories.includes("METALWORKING") && (
-                <Text style={styles.indicator}>✔</Text>
-              )}
-            </View>
-
-            <View style={styles.buttonWrapper}>
-              <TouchableOpacity
-                style={[
-                  styles.button,
-                  selectedCategories.includes("MOBILE BASE STATIONS") &&
-                    styles.selectedButton,
-                ]}
-                onPress={() => handleFilter("MOBILE BASE STATIONS")}
-              >
-                <Text style={styles.buttonText}>MOBILE BASE STATIONS</Text>
-              </TouchableOpacity>
-              {selectedCategories.includes("MOBILE BASE STATIONS") && (
-                <Text style={styles.indicator}>✔</Text>
-              )}
-            </View>
-
-            <View style={styles.buttonWrapper}>
-              <TouchableOpacity
-                style={[
-                  styles.button,
-                  selectedCategories.includes("TRAILERS") &&
-                    styles.selectedButton,
-                ]}
-                onPress={() => handleFilter("TRAILERS")}
-              >
-                <Text style={styles.buttonText}>TRAILERS</Text>
-              </TouchableOpacity>
-              {selectedCategories.includes("TRAILERS") && (
-                <Text style={styles.indicator}>✔</Text>
-              )}
-            </View>
-
-            {/* Clear and Close buttons in the same row */}
-            <View style={styles.buttonRow}>
-              <TouchableOpacity
-                style={styles.clearButton}
-                onPress={clearSelection}
-              >
-                <Text style={styles.clearButtonText}>Clear Selection</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={() => setFilterModalVisible(false)}
-              >
-                <Text style={styles.closeButtonText}>Close</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <FilterModalWarehouse
+        isVisible={isFilterModalVisible}
+        onClose={() => setFilterModalVisible(false)}
+        selectedCategories={selectedCategories}
+        handleFilter={handleFilter}
+        clearSelection={clearSelection}
+      />
     </SafeAreaView>
   );
 };
@@ -306,58 +234,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "white",
-  },
-  buttonWrapper: {
-    marginBottom: 10,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  button: {
-    flex: 1,
-    padding: 15,
-    backgroundColor: "#A4D337",
-    borderRadius: 5,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  buttonRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 10,
-  },
-  clearButton: {
-    padding: 15,
-    backgroundColor: "black", // Clear button color
-    borderRadius: 5,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  clearButtonText: {
-    color: "#A4D337", // Clear button text color
-    fontSize: 16,
-  },
-  selectedButton: {
-    backgroundColor: "#8DBA30", // Darker green for selected button
-  },
-  buttonText: {
-    color: "white",
-    fontSize: 16,
-  },
-  indicator: {
-    marginLeft: 10,
-    color: "#A4D337",
-    fontSize: 18,
-  },
-  closeButton: {
-    padding: 15,
-    backgroundColor: "black",
-    borderRadius: 5,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  closeButtonText: {
-    color: "#A4D337",
-    fontSize: 16,
   },
   navbar: {
     position: "absolute",
@@ -415,26 +291,43 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     color: "white",
+    fontSize: 16,
     fontWeight: "bold",
   },
-  filterButton: {
-    padding: 10,
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
-  filterIcon: {
-    width: 25,
-    height: 25,
+  modalContent: {
+    backgroundColor: "white",
+    padding: 20,
+    borderRadius: 10,
+    width: "80%",
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  modalInput: {
+    borderColor: "gray",
+    borderWidth: 1,
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 10,
   },
   taskList: {
     paddingHorizontal: 20,
-    marginTop: 20,
+    paddingBottom: 20,
   },
   taskItem: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 20,
-    borderBottomWidth: 3,
-    borderBottomColor: "black",
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ccc",
   },
   taskLeft: {
     flexDirection: "row",
@@ -444,55 +337,38 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: "#D8BFD8",
+    backgroundColor: "green",
     marginRight: 10,
   },
   taskTitle: {
     fontSize: 16,
+    fontWeight: "bold",
   },
   taskRight: {
-    flexDirection: "row",
     alignItems: "center",
-  },
-  checkIcon: {
-    width: 20,
-    height: 20,
-  },
-  unchecked: {
-    width: 20,
-    height: 20,
-    backgroundColor: "red",
   },
   pagination: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 20,
   },
   pageButton: {
-    color: "#A4D337",
-    fontWeight: "bold",
+    padding: 10,
+    fontSize: 16,
+    color: "blue",
   },
   pageNumber: {
+    marginHorizontal: 10,
     fontSize: 16,
   },
-  modalContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
-  modalContent: {
-    backgroundColor: "white",
-    padding: 20,
-    borderRadius: 10,
-    width: "80%",
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 10,
+  scannedDataText: {
+    marginTop: 20,
+    textAlign: "center",
+    fontSize: 16,
+    color: "green",
   },
 });
 
 export default Warehouse;
+

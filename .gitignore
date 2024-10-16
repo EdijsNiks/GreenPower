@@ -7,7 +7,7 @@ node_modules/
 .expo/
 dist/
 web-build/
-
+backend/
 # Native
 *.orig.*
 *.jks
@@ -29,7 +29,9 @@ yarn-error.*
 *.pem
 
 # local env files
-.env*.local
+.env*.localS
 
 # typescript
 *.tsbuildinfo
+
+

@@ -41,10 +41,11 @@ const ReservedItemsModal = ({
   );
 
   const renderWarehouseItem = ({ item }) => (
-    <TouchableOpacity style={styles.itemInfo} onPress={() => onAdd(item)}>
+    <TouchableOpacity style={styles.warehouseItemInfo} onPress={() => onAdd(item)}>
       <Text style={styles.itemText}>{item.name}</Text>
     </TouchableOpacity>
   );
+  
 
   return (
     <Modal visible={visible} animationType="slide">
@@ -113,9 +114,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     padding: 10,
     backgroundColor: "#fff",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#ddd",
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: "#A4D337", // Green border color
   },
   itemInfo: {
     flex: 1,
@@ -138,6 +139,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 5,
     marginTop: 20,
+  },
+  warehouseItemInfo: {
+    padding: 15,
+    marginVertical: 5,
+    borderColor: "#A4D337", // Green border color
+    borderWidth: 2, // Border width
+    borderRadius: 5, // Optional: Rounded corners
+    backgroundColor: "white", // Background color for better visibility
+  },
+  itemText: {
+    fontSize: 16,
+    color: "black", // Text color
   },
 });
 
