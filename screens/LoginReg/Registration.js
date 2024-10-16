@@ -195,6 +195,30 @@ const Registration = () => {
             </Text>
           </Text>
         </View>
+
+        {/* Choosing Language */}
+        <View style={styles.languageContainer}>
+          <View style={styles.languageButtons}>
+            <TouchableOpacity
+              style={styles.languageButton}
+              onPress={() => console.log("Latvian selected")}
+            >
+              <Text style={styles.languageButtonText}>Latvian</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.languageButton}
+              onPress={() => console.log("English selected")}
+            >
+              <Text style={styles.languageButtonText}>English</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.languageButton}
+              onPress={() => console.log("Russian selected")}
+            >
+              <Text style={styles.languageButtonText}>Russian</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -205,6 +229,29 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  languageContainer: {
+    flexDirection: "column",
+    alignItems: "center",
+    marginVertical: 20,
+  },
+  languageText: {
+    fontSize: 16,
+    marginBottom: 10,
+  },
+  languageButtons: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    width: "80%",
+  },
+  languageButton: {
+    padding: 10,
+    backgroundColor: "#f0f0f0",
+    borderRadius: 5,
+  },
+  languageButtonText: {
+    fontSize: 14,
+    color: "#000",
   },
   image: {
     marginBottom: 20,

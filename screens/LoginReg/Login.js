@@ -19,7 +19,7 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const navigation = useNavigation();
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const [isPressed, setIsPressed] = useState(false); 
+  const [isPressed, setIsPressed] = useState(false);
 
   const togglePasswordVisibility = () => setPasswordVisible(!passwordVisible);
 
@@ -67,7 +67,7 @@ const Login = () => {
         {/* Image */}
         <Image
           source={require("../../assets/logo1.png")}
-          style={[styles.image, { width: width - 20, height: height * 0.2 }]} 
+          style={[styles.image, { width: width - 20, height: height * 0.2 }]}
           resizeMode="contain"
         />
 
@@ -128,6 +128,30 @@ const Login = () => {
             </Text>
           </Text>
         </View>
+
+        {/* Choosing Language */}
+        <View style={styles.languageContainer}>
+          <View style={styles.languageButtons}>
+            <TouchableOpacity
+              style={styles.languageButton}
+              onPress={() => console.log("Latvian selected")}
+            >
+              <Text style={styles.languageButtonText}>Latvian</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.languageButton}
+              onPress={() => console.log("English selected")}
+            >
+              <Text style={styles.languageButtonText}>English</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.languageButton}
+              onPress={() => console.log("Russian selected")}
+            >
+              <Text style={styles.languageButtonText}>Russian</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -139,11 +163,34 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  languageContainer: {
+    flexDirection: "column",
+    alignItems: "center",
+    marginVertical: 40,
+  },
+  languageText: {
+    fontSize: 16,
+    marginBottom: 10,
+  },
+  languageButtons: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    width: "80%",
+  },
+  languageButton: {
+    padding: 10,
+    backgroundColor: "#f0f0f0",
+    borderRadius: 5,
+  },
+  languageButtonText: {
+    fontSize: 14,
+    color: "#000",
+  },
   image: {
-    marginBottom: 20, 
+    marginBottom: 20,
   },
   inputContainer: {
-    marginTop: 10, 
+    marginTop: 10,
     flexDirection: "row",
     backgroundColor: "white",
     paddingVertical: 5,
@@ -173,7 +220,7 @@ const styles = StyleSheet.create({
     color: "black",
   },
   loginButton: {
-    marginTop: 20, 
+    marginTop: 20,
     width: 350,
     paddingVertical: 15,
     borderRadius: 20,
