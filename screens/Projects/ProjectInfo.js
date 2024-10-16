@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -7,26 +7,48 @@ import {
   StyleSheet,
   ScrollView,
   Dimensions,
+  Modal,
+  FlatList,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import ReservedItemsModal from "../../components/ReservedItems";
 
 const { width } = Dimensions.get("window");
 
-const TasksItemInfo = () => {
+const ProjectsInfo = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { taskId } = route.params; // Get the task ID from the route params
+  const [modalVisible, setModalVisible] = useState(false);
+
+  const [reservedItems, setReservedItems] = useState([
+    { id: 1, name: "Item 1" },
+    { id: 2, name: "Item 2" },
+  ]);
+
+  // Warehouse items that are not reserved yet
+  const warehouseItems = [
+    { id: 3, name: "Item 3" },
+    { id: 4, name: "Item 4" },
+  ];
+
+  const onAdd = (item) => {
+    setReservedItems([...reservedItems, item]);
+  };
+
+  const onRemove = (itemId) => {
+    setReservedItems(reservedItems.filter((item) => item.id !== itemId));
+  };
 
   // Fetch task details using taskId (static data for now)
   const task = {
-    name: "Task Name",
-    category: "Task Category",
+    name: "Project Name",
+    category: "Project Category",
     creator: "Jeff",
     date: "03.09.2024 09:40",
-    description: "Task description here...",
+    description: "Project description here...",
   };
-  
 
   return (
     <SafeAreaView style={styles.container}>
@@ -34,13 +56,10 @@ const TasksItemInfo = () => {
 
       <View style={styles.navbar}>
         <Image source={require("../../assets/logo1.png")} style={styles.logo} />
-        <Text style={styles.screenName}>TASK INFO</Text>
+        <Text style={styles.screenName}>PROJECT INFO</Text>
       </View>
 
-        <View
-          style={styles.backButtonContainer}
-        >
-        </View>
+      <View style={styles.backButtonContainer}></View>
       <ScrollView>
         {/* Task Info Section */}
         <View style={styles.taskInfo}>
@@ -51,16 +70,33 @@ const TasksItemInfo = () => {
           </Text>
         </View>
 
+        <View style={styles.paddingBetweenSection}></View>
+        {/* Reserved Item Info Section */}
+        <View style={styles.reservedItemsSection}>
+          <Text style={styles.sectionTitle}>Reserved Items</Text>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => setModalVisible(true)}
+          >
+            <Text style={styles.buttonText}>View Reserved Items</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Buttons */}
         <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.finishButton}>
-            <Text style={styles.buttonText} onPress={() => navigation.navigate("Main", {screen: "Tasks"})}>Go back</Text>
+          <TouchableOpacity style={styles.finishButton}>
+            <Text
+              style={styles.buttonText}
+              onPress={() => navigation.navigate("Main", { screen: "Tasks" })}
+            >
+              Go back
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.editButton}>
             <Text style={styles.buttonText}>Edit Info</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.finishButton}>
-            <Text style={styles.buttonText}>Finish Task</Text>
+            <Text style={styles.buttonText}>Finish Project</Text>
           </TouchableOpacity>
         </View>
 
@@ -70,11 +106,11 @@ const TasksItemInfo = () => {
 
         {/* Photos Section */}
         <View style={styles.photosSection}>
-        <View style={styles.photoRow}>
-          <Text style={styles.photosTitle}>PHOTOS</Text>
-          <TouchableOpacity style={styles.addPhotoButton}>
-            <Text style={styles.buttonText}>Add Photo</Text>
-          </TouchableOpacity>
+          <View style={styles.photoRow}>
+            <Text style={styles.photosTitle}>PHOTOS</Text>
+            <TouchableOpacity style={styles.addPhotoButton}>
+              <Text style={styles.buttonText}>Add Photo</Text>
+            </TouchableOpacity>
           </View>
           <View style={styles.photoGallery}>
             <View style={styles.photo}></View>
@@ -82,6 +118,18 @@ const TasksItemInfo = () => {
             <View style={styles.photo}></View>
           </View>
         </View>
+
+        {/* Modal for Reserved Items */}
+        <ReservedItemsModal
+          visible={modalVisible}
+          onClose={() => setModalVisible(false)}
+          reservedItems={reservedItems}
+          warehouseItems={warehouseItems}
+          onAdd={onAdd}
+          onRemove={onRemove}
+          navigation={navigation}
+          taskId={taskId}
+        />
       </ScrollView>
     </SafeAreaView>
   );
@@ -108,11 +156,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 40,
   },
-  screenName: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginLeft: 20,
-  },
+
   taskInfo: {
     padding: 20,
     backgroundColor: "#A4D337",
@@ -131,7 +175,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     marginVertical: 20,
-
   },
   editButton: {
     backgroundColor: "#A4D337",
@@ -210,9 +253,53 @@ const styles = StyleSheet.create({
   },
   backButtonContainer: {
     padding: 25,
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 50,
+  },
+  paddingBetweenSection: {
+    padding: 5,
+    alignItems: "center",
+  },
+  reservedItemsSection: {
+    padding: 20,
+  },
+  modalContainer: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: "white",
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  modalSubtitle: {
+    fontSize: 16,
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  closeButton: {
+    backgroundColor: "#A4D337",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+    marginTop: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  addButton: {
+    backgroundColor: "#A4D337",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+  },
+  buttonText: {
+    color: "white",
+    fontWeight: "bold",
   },
 });
 
-export default TasksItemInfo;
+export default ProjectsInfo;

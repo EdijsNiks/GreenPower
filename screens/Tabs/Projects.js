@@ -25,7 +25,7 @@ const tasksData = Array.from({ length: 30 }, (_, i) => ({
   completed: i % 3 === 0,
 }));
 
-const Tasks = () => {
+const Projects = () => {
   const navigation = useNavigation();
   const [currentUser, setCurrentUser] = useState("");
   const [taskList, setTaskList] = useState(tasksData);
@@ -130,7 +130,7 @@ const Tasks = () => {
       {/* Navbar */}
       <View style={styles.navbar}>
         <Image source={require("../../assets/logo1.png")} style={styles.logo} />
-        <Text style={styles.screenName}>TASKS</Text>
+        <Text style={styles.screenName}>PROJECTS</Text>
       </View>
 
       {/* Profile Container */}
@@ -148,15 +148,15 @@ const Tasks = () => {
         </TouchableOpacity>
         <TextInput
           style={styles.searchBar}
-          placeholder="Search Task"
+          placeholder="Search Project"
           value={searchQuery}
           onChangeText={handleSearch}
         />
         <TouchableOpacity
           style={styles.addButton}
-          onPress={() => navigation.navigate("Tasks", {screen: "AddItemToTasks"})}
+          onPress={() => navigation.navigate("Projects", {screen: "AddItemToProject"})}
         >
-          <Text style={styles.addButtonText}>Add Task</Text>
+          <Text style={styles.addButtonText}>Add Project</Text>
         </TouchableOpacity>
       </View>
 
@@ -441,4 +441,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Tasks;
+export default Projects;

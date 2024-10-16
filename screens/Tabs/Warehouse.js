@@ -50,13 +50,6 @@ const Warehouse = () => {
       });
   }, []);
 
-  const toggleTaskCompletion = (taskId) => {
-    setTaskList((prevTaskList) =>
-      prevTaskList.map((task) =>
-        task.id === taskId ? { ...task, completed: !task.completed } : task
-      )
-    );
-  };
 
   useLayoutEffect(() => {
     navigation.setOptions({

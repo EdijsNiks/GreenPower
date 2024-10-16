@@ -13,14 +13,14 @@ import Login from "../screens/LoginReg/Login";
 import Registration from "../screens/LoginReg/Registration";
 import Profile from "../screens/Tabs/Profile";
 import CheckIn from "../screens/Tabs/CheckIn";
-import Tasks from "../screens/Tabs/Tasks";
+import Projects from "../screens/Tabs/Projects";
 import Warehouse from "../screens/Tabs/Warehouse";
 import AdminPage from "../screens/Tabs/AdminPage";
-import TasksItemInfo from "../screens/Tasks/TasksItemInfo";
+import ProjectsInfo from "../screens/Projects/ProjectInfo";
 import ViewAll from "../screens/ViewAll";
 import WarehouseItemInfo from "../screens/Warehouse/WarehouseItemInfo";
 import AddItemToWarehouse from "../screens/Warehouse/AddItemToWarehouse";
-import AddItemToTasks from "../screens/Tasks/AddItemToTasks";
+import AddItemToProject from "../screens/Projects/AddItemToProject";
 
 const StackNavigation = () => {
   const Stack = createNativeStackNavigator();
@@ -46,10 +46,10 @@ const StackNavigation = () => {
           }}
         />
         <Tab.Screen
-          name="Tasks"
-          component={Tasks}
+          name="Projects"
+          component={Projects}
           options={{
-            tabBarLabel: "Tasks",
+            tabBarLabel: "Projects",
             tabBarLabelStyle: { color: "black", fontWeight: "bold" },
             headerShown: false,
             tabBarIcon: ({ focused }) =>
@@ -105,12 +105,12 @@ const StackNavigation = () => {
           path: "main",
           screens: {
             CheckIn: "checkin",
-            Tasks: {
-              path: "tasks",
+            Projects: {
+              path: "projects",
               screens: {
                 TasksHome: "",
-              //  TasksItemInfo: "item-info",
-                AddItemToTasks: "add-item",
+              //  ProjectsInfo: "item-info",
+                AddItemToProject: "add-item",
               },
             },
             Warehouse: {
@@ -125,7 +125,7 @@ const StackNavigation = () => {
           },
         },
         Profile: "profile",
-        TasksItemInfo: "tasks/item-info",
+        ProjectsInfo: "projects/item-info",
         AdminPage: "admin",
         ViewAll: "view-all",
         WarehouseItemInfo: "warehouse/item-info",
@@ -148,7 +148,11 @@ const StackNavigation = () => {
           component={Registration}
           options={{ headerShown: false }}
         />
-        <Stack.Screen name="Profile" component={Profile} />
+        <Stack.Screen 
+        name="Profile" 
+        component={Profile} 
+        />
+
         <Stack.Screen
           name="CheckIn"
           component={CheckIn}
@@ -161,12 +165,12 @@ const StackNavigation = () => {
         />
         <Stack.Screen
           name="Tasks"
-          component={Tasks}
+          component={Projects}
           options={{ headerShown: false }}
         />
         <Stack.Screen
           name="TasksItemInfo"
-          component={TasksItemInfo}
+          component={ProjectsInfo}
           options={{ headerShown: false }}
         />
         <Stack.Screen
@@ -181,7 +185,7 @@ const StackNavigation = () => {
         />
         <Stack.Screen
           name="AddItemToTasks"
-          component={AddItemToTasks}
+          component={AddItemToProject}
           options={{ headerShown: false }}
         />
         <Stack.Screen

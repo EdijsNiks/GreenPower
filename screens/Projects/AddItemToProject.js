@@ -14,7 +14,7 @@ import { TextInput } from "react-native-web";
 
 const { width } = Dimensions.get("window");
 
-const AddItemToTasks = () => {
+const AddItemToProject = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { taskId } = route.params; // Get the task ID from the route params
@@ -216,4 +216,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default AddItemToTasks;
+export default AddItemToProject;
