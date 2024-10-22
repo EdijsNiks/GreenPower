@@ -108,7 +108,7 @@ const StackNavigation = () => {
             Projects: {
               path: "projects",
               screens: {
-                TasksHome: "",
+              ProjectsHome: "",
               //  ProjectsInfo: "item-info",
                 AddItemToProject: "add-item",
               },
@@ -184,7 +184,7 @@ const StackNavigation = () => {
           options={{ headerShown: false }}
         />
         <Stack.Screen
-          name="AddItemToTasks"
+          name="AddItemToProject"
           component={AddItemToProject}
           options={{ headerShown: false }}
         />

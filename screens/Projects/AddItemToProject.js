@@ -16,8 +16,6 @@ const { width } = Dimensions.get("window");
 
 const AddItemToProject = () => {
   const navigation = useNavigation();
-  const route = useRoute();
-  const { taskId } = route.params; // Get the task ID from the route params
 
   // Fetch task details using taskId (static data for now)
   const task = {
@@ -45,17 +43,13 @@ const AddItemToProject = () => {
       <ScrollView>
         {/* Task Info Section */}
         <View style={styles.taskInfo}>
-          <TextInput style={styles.infoText}>NAME: {task.name}</TextInput>
-          <TextInput style={styles.infoText}>Category: {task.category}</TextInput>
-          <TextInput style={styles.infoText}>
-            Created by: {task.creator} at {task.date}
-          </TextInput>
+
         </View>
 
         {/* Buttons */}
         <View style={styles.buttonRow}>
         <TouchableOpacity style={styles.finishButton}>
-            <Text style={styles.buttonText} onPress={() => navigation.navigate("Main", {screen: "Tasks"})}>Go back</Text>
+            <Text style={styles.buttonText} onPress={() => navigation.navigate("Main")}>Go back</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.editButton}>
             <Text style={styles.buttonText}>Edit Info</Text>

@@ -1,4 +1,5 @@
-import React, { useLayoutEffect, useState, useEffect } from "react";
+import React, { useLayoutEffect, useState, useEffect, useCallback } from "react";
+import { useFocusEffect } from "@react-navigation/native"; 
 import {
   StyleSheet,
   Text,
@@ -16,15 +17,14 @@ import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import FilterModalWarehouse from "../../components/FilterModalWarehouse";
-import QRCodeScannerComponent from "./QRCodeScannerComponent";
+import QRCodeScannerComponent from "../../components/QRCodeScannerComponent";
+import Pagination from '../../components/Pagination';
 
 const { width } = Dimensions.get("window");
 
 const tasksData = Array.from({ length: 30 }, (_, i) => ({
   id: i + 1,
   title: `Item ${i + 1}`,
-  category: i % 2 === 0 ? "UPS" : "Generators",
-  completed: i % 3 === 0,
 }));
 
 const Warehouse = () => {
@@ -35,9 +35,8 @@ const Warehouse = () => {
   const [filteredTaskList, setFilteredTaskList] = useState([]);
   const [isFilterModalVisible, setFilterModalVisible] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1); // Pagination state
   const tasksPerPage = 10;
-  const [isAddItemModalVisible, setAddItemModalVisible] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [scannedData, setScannedData] = useState("");
 
@@ -61,6 +60,13 @@ const Warehouse = () => {
     });
   }, [navigation]);
 
+  // Reset pagination when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      setCurrentPage(1); // Reset to first page when screen is focused
+    }, [])
+  );
+
   const handleSearch = (text) => {
     setSearchQuery(text);
     const filteredData = tasksData.filter((task) =>
@@ -71,12 +77,10 @@ const Warehouse = () => {
 
   const handleFilter = (category) => {
     if (selectedCategories.includes(category)) {
-      // If already selected, remove it
       setSelectedCategories(
         selectedCategories.filter((cat) => cat !== category)
       );
     } else {
-      // Otherwise, add it
       setSelectedCategories([...selectedCategories, category]);
     }
 
@@ -89,8 +93,8 @@ const Warehouse = () => {
 
   const clearSelection = () => {
     setSelectedCategories([]);
-    setTaskList(tasksData); // Reset task list to original data
-    setFilterModalVisible(false); // Optionally close the modal when clearing selection
+    setTaskList(tasksData);
+    setFilterModalVisible(false);
   };
 
   const handleQRCodeRead = (e) => {
@@ -98,8 +102,8 @@ const Warehouse = () => {
     setIsScanning(false);
   };
 
-  const handleAddItemPress = () => {
-    setAddItemModalVisible(true); // Open the add item modal
+  const openQRScanner = () => {
+    setIsScanning(true);
   };
 
   const renderTaskItem = ({ item }) => (
@@ -153,43 +157,30 @@ const Warehouse = () => {
           value={searchQuery}
           onChangeText={handleSearch}
         />
-        <View style={styles.container}>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={handleAddItemPress}
-          >
-            <Text style={styles.addButtonText}>Add Item</Text>
-          </TouchableOpacity>
+      </View>
 
-          {isScanning && <QRCodeScannerComponent onRead={handleQRCodeRead} />}
+      <View style={styles.container}>
+        {/* QR Code Scanner Button */}
+        <TouchableOpacity
+          style={styles.qrButton}
+          onPress={openQRScanner}
+        >
+          <Text style={styles.qrButtonText}>Scan QR Code</Text>
+        </TouchableOpacity>
+        
+        {/* Add Item Button */}
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => navigation.navigate("AddItemToWarehouse")}
+        >
+          <Text style={styles.addButtonText}>Add Item</Text>
+        </TouchableOpacity>
 
-          {/* Add Item Modal */}
-          <Modal
-            visible={isAddItemModalVisible}
-            transparent={true}
-            animationType="slide"
-          >
-            <View style={styles.modalOverlay}>
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Add New Item</Text>
-                {/* Add your form fields here */}
-                <TextInput
-                  style={styles.modalInput}
-                  placeholder="Item Title"
-                />
-                <Button title="Submit" onPress={() => setAddItemModalVisible(true)} />
-                <Button title="Cancel" onPress={() => setAddItemModalVisible(false)} />
-              </View>
-            </View>
-          </Modal>
-
-          {/* Display scanned data if available */}
-          {scannedData ? (
-            <Text style={styles.scannedDataText}>
-              Scanned Data: {scannedData}
-            </Text>
-          ) : null}
-        </View>
+        {scannedData ? (
+          <Text style={styles.scannedDataText}>
+            Scanned Data: {scannedData}
+          </Text>
+        ) : null}
       </View>
 
       {/* Task List */}
@@ -201,24 +192,14 @@ const Warehouse = () => {
       />
 
       {/* Pagination */}
-      <View style={styles.pagination}>
-        <TouchableOpacity
-          disabled={currentPage === 1}
-          onPress={() => setCurrentPage((prev) => prev - 1)}
-        >
-          <Text style={styles.pageButton}>Prev</Text>
-        </TouchableOpacity>
-        <Text style={styles.pageNumber}>
-          Page {currentPage} of {totalPages}
-        </Text>
-        <TouchableOpacity
-          disabled={currentPage === totalPages}
-          onPress={() => setCurrentPage((prev) => prev + 1)}
-        >
-          <Text style={styles.pageButton}>Next</Text>
-        </TouchableOpacity>
-      </View>
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPrev={() => setCurrentPage((prev) => prev - 1)}
+        onNext={() => setCurrentPage((prev) => prev + 1)}
+      />
 
+      {/* Modals */}
       <FilterModalWarehouse
         isVisible={isFilterModalVisible}
         onClose={() => setFilterModalVisible(false)}
@@ -226,6 +207,9 @@ const Warehouse = () => {
         handleFilter={handleFilter}
         clearSelection={clearSelection}
       />
+
+      {/* QR Code Scanner */}
+      {isScanning && <QRCodeScannerComponent onRead={handleQRCodeRead} />}
     </SafeAreaView>
   );
 };
@@ -283,6 +267,22 @@ const styles = StyleSheet.create({
     padding: 10,
     marginHorizontal: 10,
   },
+  container: {
+    alignItems: "center",
+    marginTop: 10,
+  },
+  qrButton: {
+    backgroundColor: "#A4D337",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+    marginBottom: 10,
+  },
+  qrButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
   addButton: {
     backgroundColor: "#A4D337",
     paddingVertical: 10,
@@ -298,25 +298,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba     (0, 0, 0, 0.5)",
   },
   modalContent: {
     backgroundColor: "white",
     padding: 20,
     borderRadius: 10,
     width: "80%",
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
-  modalInput: {
-    borderColor: "gray",
-    borderWidth: 1,
-    borderRadius: 5,
-    padding: 10,
-    marginBottom: 10,
   },
   taskList: {
     paddingHorizontal: 20,
@@ -346,21 +334,6 @@ const styles = StyleSheet.create({
   },
   taskRight: {
     alignItems: "center",
-  },
-  pagination: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 20,
-  },
-  pageButton: {
-    padding: 10,
-    fontSize: 16,
-    color: "blue",
-  },
-  pageNumber: {
-    marginHorizontal: 10,
-    fontSize: 16,
   },
   scannedDataText: {
     marginTop: 20,

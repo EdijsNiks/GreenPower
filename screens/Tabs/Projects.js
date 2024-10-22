@@ -154,7 +154,7 @@ const Projects = () => {
         />
         <TouchableOpacity
           style={styles.addButton}
-          onPress={() => navigation.navigate("Projects", {screen: "AddItemToProject"})}
+          onPress={() => navigation.navigate("AddItemToProject")}
         >
           <Text style={styles.addButtonText}>Add Project</Text>
         </TouchableOpacity>
