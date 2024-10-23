@@ -159,6 +159,7 @@ const Warehouse = () => {
       </View>
 
       <View style={styles.container}>
+      <View>
         {/* QR Code Scanner Button */}
         <TouchableOpacity
           style={styles.qrButton}
@@ -180,6 +181,7 @@ const Warehouse = () => {
             Scanned Data: {scannedData}
           </Text>
         ) : null}
+        </View>
       </View>
 
       {/* Task List */}
