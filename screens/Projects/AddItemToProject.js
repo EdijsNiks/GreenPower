@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -7,75 +7,117 @@ import {
   StyleSheet,
   ScrollView,
   Dimensions,
+  Alert,
+  TextInput,
 } from "react-native";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { TextInput } from "react-native-web";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const { width } = Dimensions.get("window");
 
 const AddItemToProject = () => {
   const navigation = useNavigation();
 
-  // Fetch task details using taskId (static data for now)
-  const task = {
-    name: "Task Name",
-    category: "Task Category",
-    creator: "Jeff",
-    date: "03.09.2024 09:40",
-    description: "Task description here...",
+  // States for input fields
+  const [projectName, setProjectName] = useState("");
+  const [description, setDescription] = useState("");
+  const [photos, setPhotos] = useState([]);
+
+  // Handle Save
+  const handleSaveProject = async () => {
+    if (!projectName || !description) {
+      Alert.alert("Error", "Please enter both project name and description.");
+      return;
+    }
+
+    const newProject = {
+      name: projectName,
+      description: description,
+      photos: photos,
+      dateCreated: new Date().toLocaleString(),
+    };
+
+    try {
+      const storedProjects = await AsyncStorage.getItem("projects");
+      const projects = storedProjects ? JSON.parse(storedProjects) : [];
+      projects.push(newProject);
+      await AsyncStorage.setItem("projects", JSON.stringify(projects));
+      
+      Alert.alert("Success", "Project saved successfully!");
+      console.log("Project saved:", newProject);
+      
+      // Optionally, clear input fields after saving
+      setProjectName("");
+      setDescription("");
+      setPhotos([]);
+    } catch (error) {
+      console.error("Error saving project:", error);
+      Alert.alert("Error", "There was an issue saving the project.");
+    }
   };
-  
+
+  // Add photo logic (stubbed for now)
+  const handleAddPhoto = () => {
+    // For now, just simulate adding a photo as text
+    setPhotos([...photos, `Photo ${photos.length + 1}`]);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       {/* Navbar */}
-
       <View style={styles.navbar}>
         <Image source={require("../../assets/logo1.png")} style={styles.logo} />
-        <Text style={styles.screenName}>Add Task Item</Text>
+        <Text style={styles.screenName}>Add Project</Text>
       </View>
 
-        <View
-          style={styles.backButtonContainer}
-        >
-        </View>
       <ScrollView>
-        {/* Task Info Section */}
-        <View style={styles.taskInfo}>
+        {/* Input Fields */}
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Project Name"
+            value={projectName}
+            onChangeText={setProjectName}
+          />
+          <TextInput
+            style={styles.textArea}
+            placeholder="Description"
+            value={description}
+            onChangeText={setDescription}
+            multiline={true}
+            numberOfLines={4}
+          />
+        </View>
 
+        {/* Photos Section */}
+        <View style={styles.photosSection}>
+          <View style={styles.photoRow}>
+            <Text style={styles.photosTitle}>PHOTOS</Text>
+            <TouchableOpacity style={styles.addPhotoButton} onPress={handleAddPhoto}>
+              <Text style={styles.buttonText}>Add Photo</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Display added photos */}
+          <View style={styles.photoGallery}>
+            {photos.map((photo, index) => (
+              <View key={index} style={styles.photo}>
+                <Text>{photo}</Text>
+              </View>
+            ))}
+          </View>
         </View>
 
         {/* Buttons */}
         <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.finishButton}>
-            <Text style={styles.buttonText} onPress={() => navigation.navigate("Main")}>Go back</Text>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Text style={styles.buttonText}>Go Back</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.editButton}>
-            <Text style={styles.buttonText}>Edit Info</Text>
+          <TouchableOpacity style={styles.saveButton} onPress={handleSaveProject}>
+            <Text style={styles.buttonText}>Save Project</Text>
+            
           </TouchableOpacity>
-          <TouchableOpacity style={styles.finishButton}>
-            <Text style={styles.buttonText}>Finish Task</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Task Description */}
-        <Text style={styles.description}>TASK DESCRIPTION</Text>
-        <Text style={styles.descriptionText}>{task.description}</Text>
-
-        {/* Photos Section */}
-        <View style={styles.photosSection}>
-        <View style={styles.photoRow}>
-          <Text style={styles.photosTitle}>PHOTOS</Text>
-          <TouchableOpacity style={styles.addPhotoButton}>
-            <Text style={styles.buttonText}>Add Photo</Text>
-          </TouchableOpacity>
-          </View>
-          <View style={styles.photoGallery}>
-            <View style={styles.photo}></View>
-            <View style={styles.photo}></View>
-            <View style={styles.photo}></View>
-          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -86,99 +128,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "white",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#A4D337",
-    paddingHorizontal: 10,
-    paddingTop: 20,
-  },
-  backButton: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginRight: 10,
-  },
-  logo: {
-    width: 60,
-    height: 40,
-  },
-  screenName: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginLeft: 20,
-  },
-  taskInfo: {
-    padding: 20,
-    backgroundColor: "#A4D337",
-  },
-  infoText: {
-    fontSize: 16,
-    marginBottom: 5,
-  },
-  buttonRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginVertical: 20,
-    marginHorizontal: 20,
-  },
-  photoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginVertical: 20,
-
-  },
-  editButton: {
-    backgroundColor: "#A4D337",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 5,
-  },
-  finishButton: {
-    backgroundColor: "#A4D337",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 5,
-  },
-  buttonText: {
-    color: "white",
-    fontWeight: "bold",
-  },
-  description: {
-    fontSize: 18,
-    marginHorizontal: 20,
-    marginTop: 20,
-    marginBottom: 10,
-  },
-  descriptionText: {
-    fontSize: 14,
-    marginHorizontal: 20,
-    marginTop: 20,
-    marginBottom: 10,
-  },
-  photosSection: {
-    padding: 20,
-  },
-  photosTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  addPhotoButton: {
-    backgroundColor: "#A4D337",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 5,
-    alignSelf: "flex-end",
-    marginBottom: 10,
-  },
-  photoGallery: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  photo: {
-    width: 100,
-    height: 100,
-    backgroundColor: "lightgray",
   },
   navbar: {
     position: "absolute",
@@ -203,10 +152,81 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginLeft: width * 0.15,
   },
-  backButtonContainer: {
-    padding: 25,
-    alignItems: 'center',
-    marginBottom: 50,
+  inputContainer: {
+    marginTop: 150,
+    paddingHorizontal: 20,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 20,
+    fontSize: 16,
+  },
+  textArea: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 5,
+    padding: 10,
+    height: 100,
+    textAlignVertical: "top",
+    fontSize: 16,
+  },
+  photosSection: {
+    padding: 20,
+  },
+  photosTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  addPhotoButton: {
+    backgroundColor: "#A4D337",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+    alignSelf: "flex-end",
+    marginBottom: 10,
+  },
+  photoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  photoGallery: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  photo: {
+    width: 100,
+    height: 100,
+    backgroundColor: "lightgray",
+    marginRight: 10,
+    marginBottom: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginVertical: 20,
+    marginHorizontal: 20,
+  },
+  backButton: {
+    backgroundColor: "red",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+  },
+  saveButton: {
+    backgroundColor: "#A4D337",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+  },
+  buttonText: {
+    color: "white",
+    fontWeight: "bold",
   },
 });
 
