@@ -1,5 +1,10 @@
-import React, { useLayoutEffect, useState, useEffect, useCallback } from "react";
-import { useFocusEffect } from "@react-navigation/native"; 
+import React, {
+  useLayoutEffect,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   StyleSheet,
   Text,
@@ -17,7 +22,7 @@ import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import FilterModalWarehouse from "../../components/FilterModalWarehouse";
-import Pagination from '../../components/Pagination';
+import Pagination from "../../components/Pagination";
 
 const { width } = Dimensions.get("window");
 
@@ -159,29 +164,25 @@ const Warehouse = () => {
       </View>
 
       <View style={styles.container}>
-      <View>
-        {/* QR Code Scanner Button */}
-        <TouchableOpacity
-          style={styles.qrButton}
-          onPress={openQRScanner}
-        >
-          <Text style={styles.qrButtonText}>Scan QR Code</Text>
-        </TouchableOpacity>
-        
-        {/* Add Item Button */}
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => navigation.navigate("AddItemToWarehouse")}
-        >
-          <Text style={styles.addButtonText}>Add Item</Text>
-        </TouchableOpacity>
+        <View style={styles.buttonRow}>
+          {/* QR Code Scanner Button */}
+          <TouchableOpacity style={styles.qrButton} onPress={openQRScanner}>
+            <Text style={styles.qrButtonText}>Scan QR Code</Text>
+          </TouchableOpacity>
 
+          {/* Add Item Button */}
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => navigation.navigate("AddItemToWarehouse")}
+          >
+            <Text style={styles.addButtonText}>Add Item</Text>
+          </TouchableOpacity>
+        </View>
         {scannedData ? (
           <Text style={styles.scannedDataText}>
             Scanned Data: {scannedData}
           </Text>
         ) : null}
-        </View>
       </View>
 
       {/* Task List */}
@@ -277,18 +278,20 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 5,
-    marginBottom: 10,
+    marginRight: 30,
   },
   qrButtonText: {
     color: "white",
     fontSize: 16,
     fontWeight: "bold",
+    
   },
   addButton: {
     backgroundColor: "#A4D337",
     paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingHorizontal: 30,
     borderRadius: 5,
+    
   },
   addButtonText: {
     color: "white",
@@ -342,7 +345,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "green",
   },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
 });
 
 export default Warehouse;
-
