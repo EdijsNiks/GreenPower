@@ -86,7 +86,7 @@ const ProjectsInfo = () => {
 
         {/* Buttons */}
         <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.finishButton}>
+          <TouchableOpacity style={styles.finishButtonBack}>
             <Text
               style={styles.buttonText}
               onPress={() => navigation.navigate("Main", { screen: "Tasks" })}
@@ -186,6 +186,12 @@ const styles = StyleSheet.create({
   },
   finishButton: {
     backgroundColor: "#A4D337",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+  },
+  finishButtonBack: {
+    backgroundColor: "red",
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 5,
