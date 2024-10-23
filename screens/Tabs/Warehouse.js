@@ -17,7 +17,6 @@ import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import FilterModalWarehouse from "../../components/FilterModalWarehouse";
-import QRCodeScannerComponent from "../../components/QRCodeScannerComponent";
 import Pagination from '../../components/Pagination';
 
 const { width } = Dimensions.get("window");

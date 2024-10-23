@@ -11,6 +11,7 @@ import {
 import React, { useLayoutEffect, useState, useEffect } from "react";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import CustomAlert from '../../components/CheckInComp/CustomAlert';
 
 const { width } = Dimensions.get("window");
 
@@ -18,7 +19,14 @@ const CheckIn = () => {
   const navigation = useNavigation();
   const [currentUser, setCurrentUser] = useState("Jeff");
   const [checkedIn, setCheckedIn] = useState(false);
+  const [checkInTime, setCheckInTime] = useState(null);
+  const [checkOutTime, setCheckOutTime] = useState(null);
+  const [totalTime, setTotalTime] = useState(0); // Store total time spent checked in
+  const [alertVisible, setAlertVisible] = useState(false); 
+  const [alertMessage, setAlertMessage] = useState('');
+  const [showConfirm, setShowConfirm] = useState(false); // To show confirmation alert
 
+  // Load data from AsyncStorage on mount
   useEffect(() => {
     AsyncStorage.getItem("myKey")
       .then((stringifiedData) => {
@@ -31,7 +39,51 @@ const CheckIn = () => {
       .catch((error) => {
         console.error("Error retrieving data:", error);
       });
+
+    // Load stored check-in/out times and total time from AsyncStorage
+    loadStoredData();
   }, []);
+
+  const loadStoredData = async () => {
+    try {
+      const checkInTimeStored = await AsyncStorage.getItem('checkInTime');
+      const totalTimeStored = await AsyncStorage.getItem('totalTime');
+      
+      if (checkInTimeStored) {
+        setCheckInTime(new Date(checkInTimeStored));
+        setCheckedIn(true);
+      }
+      
+      if (totalTimeStored) {
+        setTotalTime(parseFloat(totalTimeStored));
+      }
+      
+    } catch (error) {
+      console.error('Error loading stored data:', error);
+    }
+  };
+
+  // Reset states and total time after 24 hours
+  const resetStates = async () => {
+    setCheckedIn(false);
+    setCheckInTime(null);
+    setCheckOutTime(null);
+    setTotalTime(0);
+    await AsyncStorage.removeItem('checkInTime');
+    await AsyncStorage.removeItem('totalTime');
+  };
+
+  useEffect(() => {
+    // Automatically reset the state every 24 hours
+    const interval = setInterval(async () => {
+      const now = new Date();
+      if (checkInTime && now.getTime() - checkInTime.getTime() >= 24 * 60 * 60 * 1000) {
+        await resetStates();
+      }
+    }, 1000 * 60); // Check every minute
+
+    return () => clearInterval(interval);
+  }, [checkInTime]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -39,36 +91,80 @@ const CheckIn = () => {
     });
   }, [navigation]);
 
-  const handleCheckIn = () => {
+  const calculateTotalTime = (start, end) => {
+    const timeSpent = (end - start) / 1000 / 60; // Time spent in minutes
+    return timeSpent;
+  };
+
+  const formatDateTime = (date) => {
+    const options = {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    };
+    return date.toLocaleDateString(undefined, options);
+  };
+
+  const handleCheckIn = async () => {
     if (checkedIn) {
-      // If the user is already checked in, check out
-      Alert.alert("You have checked out.");
-      setTimeout(() => {
-        setCheckedIn(false); // Set back to unchecked state
-      }, 500);
+      // Show confirmation before checking out
+      setAlertMessage("Do you really want to check out?");
+      setShowConfirm(true); // Enable Yes/No buttons in the alert
+      setAlertVisible(true);
     } else {
-      // If the user is not checked in, check in
-      Alert.alert("Check-In Successful");
-      setTimeout(() => {
-        setCheckedIn(true); // Set to checked-in state
-      }, 500);
+      // User checks in
+      const now = new Date();
+      setCheckInTime(now);
+      await AsyncStorage.setItem('checkInTime', now.toString());
+      setAlertMessage("Check-In Successful");
+      setShowConfirm(false); // Disable Yes/No buttons, show OK
+      setAlertVisible(true);
+      setCheckedIn(true);
     }
+  };
+
+  const handleCheckOut = async () => {
+    const now = new Date();
+    setCheckOutTime(now);
+
+    // Calculate total time spent checked in for this session
+    const timeSpent = calculateTotalTime(checkInTime, now);
+    const newTotalTime = totalTime + timeSpent;
+    setTotalTime(newTotalTime);
+
+    // Save total time to AsyncStorage
+    await AsyncStorage.setItem('totalTime', newTotalTime.toString());
+    
+    // Format start and end times for display
+    const checkInFormatted = formatDateTime(checkInTime);
+    const checkOutFormatted = formatDateTime(now);
+
+    // Reset check-in state
+    setCheckedIn(false);
+    setCheckInTime(null);
+    setCheckOutTime(null);
+    await AsyncStorage.removeItem('checkInTime');
+
+    setAlertMessage(
+      `You have checked out.\n\nStart: ${checkInFormatted}\nEnd: ${checkOutFormatted}\nTime spent: ${timeSpent.toFixed(2)} minutes.`
+    );
+    setShowConfirm(false);
+    setAlertVisible(true);
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Navbar */}
       <View style={styles.navbar}>
         <Image source={require("../../assets/logo1.png")} style={styles.logo} />
         <Text style={styles.screenName}>CHECKIN</Text>
       </View>
 
-      {/* Profile Container */}
       <View style={styles.profileContainer}>
         <Text style={styles.profileText}>{currentUser}</Text>
         <Text style={styles.checkInText}>Check in to work</Text>
 
-        {/* Check-In Button */}
         <TouchableOpacity
           style={checkedIn ? styles.checkedInButton : styles.checkInButton}
           onPress={handleCheckIn}
@@ -78,6 +174,15 @@ const CheckIn = () => {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Custom Alert Modal */}
+      <CustomAlert
+        visible={alertVisible}
+        message={alertMessage}
+        onClose={() => setAlertVisible(false)}
+        onConfirm={handleCheckOut}
+        showConfirm={showConfirm}
+      />
     </SafeAreaView>
   );
 };
@@ -149,3 +254,5 @@ const styles = StyleSheet.create({
 });
 
 export default CheckIn;
+
+
