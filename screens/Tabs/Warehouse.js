@@ -1,34 +1,30 @@
-import React, {
-  useLayoutEffect,
-  useState,
-  useEffect,
-  useCallback,
-} from "react";
+// Warehouse.js
+import React, { useLayoutEffect, useState, useEffect, useCallback } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import {
-  StyleSheet,
   Text,
   View,
-  Image,
   SafeAreaView,
-  Dimensions,
   TextInput,
   TouchableOpacity,
   FlatList,
-  Modal,
-  Button,
+  Image,
+  Dimensions,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import FilterModalWarehouse from "../../components/FilterModalWarehouse";
 import Pagination from "../../components/Pagination";
+import styles from "../../styles/WarehouseStyles.js";
 
 const { width } = Dimensions.get("window");
 
 const tasksData = Array.from({ length: 30 }, (_, i) => ({
   id: i + 1,
   title: `Item ${i + 1}`,
+  count: Math.floor(Math.random() * 11), // Random stock count for demonstration
+  reserved: i % 3 === 0, // Every third item is reserved for demonstration
 }));
 
 const Warehouse = () => {
@@ -49,7 +45,6 @@ const Warehouse = () => {
       .then((stringifiedData) => {
         if (stringifiedData !== null) {
           const data = JSON.parse(stringifiedData);
-          console.log("User data retrieved from AsyncStorage:", data);
           setCurrentUser(data);
         }
       })
@@ -101,13 +96,14 @@ const Warehouse = () => {
     setFilterModalVisible(false);
   };
 
-  const handleQRCodeRead = (e) => {
-    setScannedData(e.data);
-    setIsScanning(false);
-  };
-
-  const openQRScanner = () => {
-    setIsScanning(true);
+  const getItemBackgroundColor = (item) => {
+    if (item.reserved&&item.count > 0) {
+      return "#A4D337"; // Reserved item
+    }
+    if (item.count === 0) {
+      return "red"; // Out of stock
+    }
+    return "white"; // In stock but not reserved
   };
 
   const renderTaskItem = ({ item }) => (
@@ -116,13 +112,18 @@ const Warehouse = () => {
         navigation.navigate("WarehouseItemInfo", { taskId: item.id })
       }
     >
-      <View style={styles.taskItem}>
+      <View
+        style={[
+          styles.taskItem,
+          { backgroundColor: getItemBackgroundColor(item) }, // Apply conditional background
+        ]}
+      >
         <View style={styles.taskLeft}>
           <View style={styles.taskCircle}></View>
           <Text style={styles.taskTitle}>{item.title}</Text>
         </View>
         <View style={styles.taskRight}>
-          <Text>Count: 10</Text>
+          <Text>Count: {item.count}</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -166,7 +167,7 @@ const Warehouse = () => {
       <View style={styles.container}>
         <View style={styles.buttonRow}>
           {/* QR Code Scanner Button */}
-          <TouchableOpacity style={styles.qrButton} onPress={openQRScanner}>
+          <TouchableOpacity style={styles.qrButton} onPress={() => setIsScanning(true)}>
             <Text style={styles.qrButtonText}>Scan QR Code</Text>
           </TouchableOpacity>
 
@@ -211,146 +212,10 @@ const Warehouse = () => {
       />
 
       {/* QR Code Scanner */}
-      {isScanning && <QRCodeScannerComponent onRead={handleQRCodeRead} />}
+      {isScanning && <QRCodeScannerComponent onRead={(e) => setScannedData(e.data)} />}
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "white",
-  },
-  navbar: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: 110,
-    backgroundColor: "black",
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 26,
-    paddingTop: 10,
-    zIndex: 1,
-  },
-  logo: {
-    width: 90,
-    height: 60,
-  },
-  screenName: {
-    color: "#A4D337",
-    fontSize: 30,
-    fontWeight: "bold",
-    marginLeft: width * 0.15,
-  },
-  profileContainer: {
-    marginTop: 110,
-    paddingHorizontal: 20,
-    alignItems: "center",
-  },
-  profileText: {
-    fontSize: 30,
-    fontWeight: "bold",
-    color: "black",
-  },
-  actionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    marginTop: 20,
-  },
-  searchBar: {
-    flex: 1,
-    borderColor: "gray",
-    borderWidth: 1,
-    borderRadius: 5,
-    padding: 10,
-    marginHorizontal: 10,
-  },
-  container: {
-    alignItems: "center",
-    marginTop: 10,
-  },
-  qrButton: {
-    backgroundColor: "#A4D337",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 5,
-    marginRight: 30,
-  },
-  qrButtonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "bold",
-    
-  },
-  addButton: {
-    backgroundColor: "#A4D337",
-    paddingVertical: 10,
-    paddingHorizontal: 30,
-    borderRadius: 5,
-    
-  },
-  addButtonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba     (0, 0, 0, 0.5)",
-  },
-  modalContent: {
-    backgroundColor: "white",
-    padding: 20,
-    borderRadius: 10,
-    width: "80%",
-  },
-  taskList: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  taskItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
-  },
-  taskLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  taskCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: "green",
-    marginRight: 10,
-  },
-  taskTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  taskRight: {
-    alignItems: "center",
-  },
-  scannedDataText: {
-    marginTop: 20,
-    textAlign: "center",
-    fontSize: 16,
-    color: "green",
-  },
-  buttonRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-});
-
 export default Warehouse;
+
