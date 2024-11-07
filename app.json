@@ -6,13 +6,19 @@
     "orientation": "portrait",
     "icon": "./assets/buildLogo.png",
     "userInterfaceStyle": "light",
+    "permissions": [
+      "CAMERA",
+      "MEDIA_LIBRARY"
+    ],
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app requires camera access to scan QR codes."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -28,6 +34,15 @@
       "eas": {
         "projectId": "767c165e-def9-46e8-bd33-61eeb72ddcca"
       }
-    }
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "$(PRODUCT_NAME) needs access to your Camera."
+        }
+      ],
+      "react-native-vision-camera"
+    ]
   }
 }

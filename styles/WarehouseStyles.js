@@ -63,7 +63,7 @@ export default StyleSheet.create({
   qrButton: {
     backgroundColor: "#A4D337",
     paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingHorizontal: 10,
     borderRadius: 5,
     marginBottom: 10,
   },
@@ -87,7 +87,7 @@ export default StyleSheet.create({
   buttonRow: {
     flexDirection: "row",
     justifyContent: "space-around",
-    width: "85%",
+    width: "100%",
     marginBottom: 10,
   },
   scannedDataText: {
@@ -124,5 +124,37 @@ export default StyleSheet.create({
   },
   taskRight: {
     alignItems: "center",
+  },
+  statusIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
+    margin: 10,
+    borderRadius: 5,
+  },
+  processingStatus: {
+    backgroundColor: '#3498db',
+  },
+  successStatus: {
+    backgroundColor: '#2ecc71',
+  },
+  errorStatus: {
+    backgroundColor: '#e74c3c',
+  },
+  statusText: {
+    color: 'white',
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
+  scanButton: {
+    backgroundColor: '#4a90e2',
+    padding: 15,
+    borderRadius: 8,
+    marginHorizontal: 5,
+    flex: 1,
   },
 });

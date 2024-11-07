@@ -2,77 +2,92 @@ import React, { useState } from "react";
 import {
   View,
   Text,
-  Image,
   TouchableOpacity,
   StyleSheet,
   ScrollView,
   Dimensions,
   Alert,
   TextInput,
+  Image,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as FileSystem from "expo-file-system";
+import PhotoPicker from '../../components/PhotoPicker'; // Adjust the import path as needed
 
 const { width } = Dimensions.get("window");
 
 const AddItemToWarehouse = () => {
   const navigation = useNavigation();
-
-  // States for input fields
   const [itemName, setItemName] = useState("");
   const [description, setDescription] = useState("");
   const [photos, setPhotos] = useState([]);
 
-  // Handle Save
   const handleSaveItem = async () => {
     if (!itemName || !description) {
       Alert.alert("Error", "Please enter both item name and description.");
       return;
     }
-
-    const newItem = {
-      name: itemName,
-      description: description,
-      photos: photos,
-      dateCreated: new Date().toLocaleString(),
-    };
-
+  
     try {
+      Alert.alert("Processing", "Saving item and processing images...");
+      const processedPhotos = await cacheAndSaveImages();
+  
+      const newItem = {
+        id: Date.now().toString(),
+        name: itemName,
+        description: description,
+        photos: processedPhotos.map(photo => photo.base64),
+        dateCreated: new Date().toLocaleString(),
+      };
+  
       const storedItems = await AsyncStorage.getItem("items");
       const items = storedItems ? JSON.parse(storedItems) : [];
       items.push(newItem);
       await AsyncStorage.setItem("items", JSON.stringify(items));
-      
-      Alert.alert("Success", "Item saved successfully!");
-      console.log("Item saved:", newItem);
-      
-      // Optionally, clear input fields after saving
-      setItemName("");
-      setDescription("");
-      setPhotos([]);
+  
+      Alert.alert("Success", "Item saved successfully!", [
+        { 
+          text: "OK", 
+          onPress: () => {
+            setItemName("");
+            setDescription("");
+            setPhotos([]);
+            navigation.goBack();
+          }
+        }
+      ]);
     } catch (error) {
       console.error("Error saving item:", error);
       Alert.alert("Error", "There was an issue saving the item.");
     }
   };
-
-  // Add photo logic (stubbed for now)
-  const handleAddPhoto = () => {
-    // For now, just simulate adding a photo as text
-    setPhotos([...photos, `Photo ${photos.length + 1}`]);
+  
+  const cacheAndSaveImages = async () => {
+    try {
+      const processedPhotos = [];
+      for (const photo of photos) {
+        const base64Image = await FileSystem.readAsStringAsync(photo.uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        processedPhotos.push({ base64: base64Image });
+      }
+      return processedPhotos;
+    } catch (error) {
+      console.error("Error processing images:", error);
+      throw new Error("Failed to process images");
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Navbar */}
       <View style={styles.navbar}>
         <Image source={require("../../assets/logo1.png")} style={styles.logo} />
         <Text style={styles.screenName}>Add Item</Text>
       </View>
 
       <ScrollView>
-        {/* Input Fields */}
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
@@ -90,31 +105,23 @@ const AddItemToWarehouse = () => {
           />
         </View>
 
-        {/* Photos Section */}
-        <View style={styles.photosSection}>
-          <View style={styles.photoRow}>
-            <Text style={styles.photosTitle}>PHOTOS</Text>
-            <TouchableOpacity style={styles.addPhotoButton} onPress={handleAddPhoto}>
-              <Text style={styles.buttonText}>Add Photo</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Display added photos */}
-          <View style={styles.photoGallery}>
-            {photos.map((photo, index) => (
-              <View key={index} style={styles.photo}>
-                <Text>{photo}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Buttons */}
+        <PhotoPicker
+          photos={photos}
+          onPhotosChange={setPhotos}
+          containerStyle={styles.photosSection}
+        />
+          
         <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
             <Text style={styles.buttonText}>Go Back</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.saveButton} onPress={handleSaveItem}>
+          <TouchableOpacity 
+            style={styles.saveButton} 
+            onPress={handleSaveItem}
+          >
             <Text style={styles.buttonText}>Save Item</Text>
           </TouchableOpacity>
         </View>
@@ -199,11 +206,8 @@ const styles = StyleSheet.create({
   photo: {
     width: 100,
     height: 100,
-    backgroundColor: "lightgray",
     marginRight: 10,
     marginBottom: 10,
-    justifyContent: "center",
-    alignItems: "center",
   },
   buttonRow: {
     flexDirection: "row",

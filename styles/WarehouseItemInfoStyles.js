@@ -1,4 +1,3 @@
-// WarehouseItemInfoStyles.js
 import { StyleSheet, Dimensions } from "react-native";
 
 const { width } = Dimensions.get("window");
@@ -83,13 +82,16 @@ const styles = StyleSheet.create({
   },
   photoGallery: {
     flexDirection: "row",
+    flexWrap: "wrap", // Allows multiple rows if there are more photos
     justifyContent: "space-between",
+    marginVertical: 10,
   },
   photo: {
-    width: 100,
-    height: 100,
-    backgroundColor: "lightgray",
-    marginRight: 10,
+    width: width * 0.28,  // Dynamic width to fit 3 photos in a row
+    height: width * 0.28, // Keeping it square
+    borderRadius: 8,
+    marginBottom: 10,
+    backgroundColor: "#f0f0f0", // Placeholder color while loading
   },
   buttonRow: {
     flexDirection: "row",
@@ -109,6 +111,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 5,
   },
+  photoContainer: {
+    margin: 5,
+    borderRadius: 8,
+    overflow: 'hidden',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  noPhotosText: {
+    color: '#666',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    padding: 20,
+  }
 });
 
 export default styles;

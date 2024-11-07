@@ -1,66 +1,111 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   Image,
   TouchableOpacity,
   ScrollView,
+  Alert,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import styles from '../../styles/WarehouseItemInfoStyles.js';
 
 const WarehouseItemInfo = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { itemId } = route.params; // Assuming we're passing 'itemId' to retrieve item details
+  const { itemId } = route.params;
 
-  // Static task details (you can later fetch this data using the itemId)
-  const item = {
-    name: "Item Name",
-    category: "Item Category",
-    description: "Item description goes here...",
-    count: 10,
+  const [item, setItem] = useState(null);
+  const [photos, setPhotos] = useState([]);
+
+  useEffect(() => {
+    loadItemData();
+  }, [itemId]);
+
+  const loadItemData = async () => {
+    try {
+      // Get all items from storage
+      const storedItems = await AsyncStorage.getItem("items");
+      const items = storedItems ? JSON.parse(storedItems) : [];
+
+      // Find the current item
+      const currentItem = items.find(item => item.id === itemId);
+
+      if (currentItem) {
+        setItem(currentItem);
+
+        // Process photos if they exist
+        if (currentItem.photos && currentItem.photos.length > 0) {
+          const processedPhotos = currentItem.photos.map(photo => ({
+            uri: `data:image/jpeg;base64,${photo.base64}`,
+            cached: photo.uri // Store the cached URI for reference
+          }));
+          setPhotos(processedPhotos);
+        }
+      } else {
+        Alert.alert("Error", "Item not found");
+        navigation.goBack();
+      }
+    } catch (error) {
+      console.error("Error loading item data:", error);
+      Alert.alert("Error", "Failed to load item data");
+    }
+  };
+
+  const handleAddPhoto = () => {
+    // This could be implemented later for editing functionality
+    Alert.alert("Info", "Edit mode required to add photos");
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Navbar */}
       <View style={styles.navbar}>
         <Image source={require("../../assets/logo1.png")} style={styles.logo} />
         <Text style={styles.screenName}>Item Info</Text>
       </View>
 
       <ScrollView>
-        {/* Item Info Section */}
         <View style={styles.itemInfoContainer}>
-          <Text style={styles.itemName}>NAME: {item.name}</Text>
-          <Text style={styles.itemDetails}>Category: {item.category}</Text>
-          <Text style={styles.itemDetails}>Count: {item.count}</Text>
+          <Text style={styles.itemName}>NAME: {item?.name || 'N/A'}</Text>
+          <Text style={styles.itemDetails}>Category: {item?.category || 'N/A'}</Text>
+          <Text style={styles.itemDetails}>Count: {item?.count || 'N/A'}</Text>
         </View>
 
-        {/* Item Description */}
         <Text style={styles.sectionTitle}>Item Description</Text>
-        <Text style={styles.descriptionText}>{item.description}</Text>
+        <Text style={styles.descriptionText}>{item?.description || 'No description available'}</Text>
 
         {/* Photos Section */}
         <View style={styles.photosSection}>
           <View style={styles.photoRow}>
             <Text style={styles.photosTitle}>Photos</Text>
-            <TouchableOpacity style={styles.addPhotoButton}>
+            <TouchableOpacity 
+              style={[styles.addPhotoButton, { opacity: 0.5 }]} // Dimmed to indicate disabled state
+              onPress={handleAddPhoto}
+            >
               <Text style={styles.buttonText}>Add Photo</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Display photos */}
+          {/* Photo Gallery */}
           <View style={styles.photoGallery}>
-            <View style={styles.photo}></View>
-            <View style={styles.photo}></View>
-            <View style={styles.photo}></View>
+            {photos.length > 0 ? (
+              photos.map((photo, index) => (
+                <View key={index} style={styles.photoContainer}>
+                  <Image
+                    source={{ uri: photo.uri }}
+                    style={styles.photo}
+                    resizeMode="cover"
+                  />
+                </View>
+              ))
+            ) : (
+              <Text style={styles.noPhotosText}>No photos available</Text>
+            )}
           </View>
         </View>
 
-        {/* Action Buttons */}
         <View style={styles.buttonRow}>
           <TouchableOpacity
             style={styles.backButton}
@@ -68,7 +113,10 @@ const WarehouseItemInfo = () => {
           >
             <Text style={styles.buttonText}>Go Back</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.editButton}>
+          <TouchableOpacity 
+            style={styles.editButton}
+            onPress={() => Alert.alert("Info", "Edit functionality coming soon")}
+          >
             <Text style={styles.buttonText}>Edit Info</Text>
           </TouchableOpacity>
         </View>
@@ -78,3 +126,4 @@ const WarehouseItemInfo = () => {
 };
 
 export default WarehouseItemInfo;
+
