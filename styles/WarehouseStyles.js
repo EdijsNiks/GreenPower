@@ -45,8 +45,9 @@ export default StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    width:"100%",
     paddingHorizontal: 20,
-    marginTop: 20,
+    paddingVertical: 20,
   },
   searchBar: {
     flex: 1,

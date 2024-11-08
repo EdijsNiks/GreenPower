@@ -97,6 +97,7 @@ const Profile = () => {
           >
             <Text style={styles.adminButtonText}>Admin Page</Text>
           </Pressable>
+          
         )}
       </View>
     </SafeAreaView>

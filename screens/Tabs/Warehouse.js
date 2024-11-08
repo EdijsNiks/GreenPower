@@ -1,9 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  useLayoutEffect,
-} from "react";
+import React, { useState, useEffect, useCallback, useLayoutEffect } from "react";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import {
   Text,
@@ -13,30 +8,21 @@ import {
   TouchableOpacity,
   FlatList,
   Image,
-  Dimensions,
   Modal,
   Button,
 } from "react-native";
-import { Camera } from "expo-camera"; // Import Camera from expo-camera
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Camera } from "expo-camera";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import FilterModalWarehouse from "../../components/FilterModalWarehouse";
 import Pagination from "../../components/Pagination";
 import QRCodeScanner from "../../components/QRCodeScanner";
 import styles from "../../styles/WarehouseStyles.js";
 import WarehouseSpots from "../../components/WarehouseSpots.js";
-
-const tasksData = Array.from({ length: 30 }, (_, i) => ({
-  id: i + 1,
-  title: `Item ${i + 1}`,
-  count: Math.floor(Math.random() * 11),
-  reserved: i % 3 === 0,
-}));
-
+import { mockData } from "../../mockData.js";
 const Warehouse = ({ route }) => {
   const navigation = useNavigation();
-  const [currentUser, setCurrentUser] = useState("");
-  const [taskList, setTaskList] = useState(tasksData);
+  const [currentUser, setCurrentUser] = useState(mockData.profile.username);
+  const [taskList, setTaskList] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredTaskList, setFilteredTaskList] = useState([]);
   const [isFilterModalVisible, setFilterModalVisible] = useState(false);
@@ -47,6 +33,20 @@ const Warehouse = ({ route }) => {
   const tasksPerPage = 10;
   const [savedData, setSavedData] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [updatedTaskList, setUpdatedTaskList] = useState([]);
+
+  useEffect(() => {
+    // Check if a new item was passed back from the AddItemToWarehouse screen
+    if (route?.params?.newItem) {
+      // Add the new item to the current list of items
+      const updatedItems = [route.params.newItem];
+      setTaskList(updatedItems);  // Update the state properly
+
+      console.log(updatedItems);
+      // Store the updated items in AsyncStorage
+     // AsyncStorage.setItem("items", JSON.stringify(updatedItems));
+    }
+  }, [route?.params?.newItem]); // Run when newItem is passed
 
   // Request camera permission
   useEffect(() => {
@@ -57,9 +57,11 @@ const Warehouse = ({ route }) => {
 
     requestCameraPermission();
 
-    // Check if there's scanned data in route parameters
     if (route.params?.scannedData) {
-      setSavedData(route.params.scannedData); // Save the scanned data
+      setSavedData(route.params.scannedData);
+      if (route.params.scannedData) {
+        setModalVisible(true);
+      }
     }
   }, [route.params?.scannedData]);
 
@@ -77,16 +79,20 @@ const Warehouse = ({ route }) => {
 
   const handleQRCodeScanned = (data) => {
     console.log("Scanned data:", data);
+    setSavedData(data);
+    setModalVisible(true);
     setShowScanner(false);
   };
-
   const handleSearch = (text) => {
     setSearchQuery(text);
-    const filteredData = tasksData.filter((task) =>
-      task.title.toLowerCase().includes(text.toLowerCase())
+    
+    const filteredData = mockData.warehouse.filter((task) =>
+      task.title ? task.title.toLowerCase().includes(text.toLowerCase()) : false
     );
+    
     setFilteredTaskList(filteredData);
   };
+  
 
   const renderTaskItem = ({ item }) => {
     let backgroundColor;
@@ -102,11 +108,13 @@ const Warehouse = ({ route }) => {
     return (
       <TouchableOpacity
         onPress={() =>
-          navigation.navigate("WarehouseItemInfo", { taskId: item.id })
+          navigation.navigate("WarehouseItemInfo", {
+          itemData: item, // Pass the entire item object
+        })
         }
       >
         <View style={[styles.taskItem, { backgroundColor }]}>
-          <Text style={styles.taskTitle}>{item.title}</Text>
+          <Text style={styles.taskTitle}>{item.name}</Text>
           <Text>Count: {item.count}</Text>
         </View>
       </TouchableOpacity>
@@ -127,7 +135,7 @@ const Warehouse = ({ route }) => {
       </View>
 
       <View style={styles.profileContainer}>
-        <Text style={styles.profileText}>{currentUser}</Text>
+        <Text style={styles.profileText}></Text>
       </View>
 
       <View style={styles.actionRow}>
@@ -157,6 +165,12 @@ const Warehouse = ({ route }) => {
           onPress={() => navigation.navigate("AddItemToWarehouse")}
         >
           <Text style={styles.addButtonText}>Add Item</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => navigation.navigate("AddSpotToWarehouse")}
+        >
+          <Text style={styles.addButtonText}>+ Spot</Text>
         </TouchableOpacity>
       </View>
 
@@ -209,14 +223,17 @@ const Warehouse = ({ route }) => {
         }}
         clearSelection={() => {
           setSelectedCategories([]);
-          setTaskList(tasksData);
+          setTaskList(mockData.warehouse);
           setFilterModalVisible(false);
         }}
       />
       <WarehouseSpots
-        visible={ savedData != null }
+        isVisible={modalVisible}
         spotData={savedData}
-        onClose={() => setSavedData(null)}
+        onClose={() => {
+          setModalVisible(false);
+          setSavedData(null);
+        }}
       />
     </SafeAreaView>
   );

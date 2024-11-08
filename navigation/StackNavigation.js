@@ -21,6 +21,7 @@ import ViewAll from "../screens/ViewAll";
 import WarehouseItemInfo from "../screens/Warehouse/WarehouseItemInfo";
 import AddItemToWarehouse from "../screens/Warehouse/AddItemToWarehouse";
 import AddItemToProject from "../screens/Projects/AddItemToProject";
+import AddSpotToWarehouse from "../screens/Warehouse/AddSpotToWarehouse";
 
 const StackNavigation = () => {
   const Stack = createNativeStackNavigator();
@@ -196,6 +197,11 @@ const StackNavigation = () => {
         <Stack.Screen
           name="ViewAll"
           component={ViewAll}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="AddSpotToWarehouse"
+          component={AddSpotToWarehouse}
           options={{ headerShown: false }}
         />
         <Stack.Screen

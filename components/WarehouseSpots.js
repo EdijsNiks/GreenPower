@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, FlatList, Modal, StyleSheet } from "react-native";
 
-const WarehouseSpots = ({ visible, spotData, onClose }) => {
+const WarehouseSpots = ({ isVisible, spotData, onClose }) => {
   const handleAddItem = () => {
     console.log("Add item to spot:", spotData);
   };
@@ -11,7 +11,7 @@ const WarehouseSpots = ({ visible, spotData, onClose }) => {
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
+    <Modal visible={isVisible} animationType="slide" transparent>
       <View style={styles.modalContainer}>
         <Text style={styles.modalTitle}>Warehouse Spot: {spotData}</Text>
         <Text style={styles.modalSubtitle}>Reserved Items</Text>

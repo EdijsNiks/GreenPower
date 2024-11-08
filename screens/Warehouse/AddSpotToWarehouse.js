@@ -9,80 +9,58 @@ import {
   Alert,
   TextInput,
   Image,
+  FlatList,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as FileSystem from "expo-file-system";
-import PhotoPicker from "../../components/PhotoPicker";
 
 const { width } = Dimensions.get("window");
 
-const AddItemToWarehouse = () => {
+const AddSpotToWarehouse = () => {
   const navigation = useNavigation();
   const [itemName, setItemName] = useState("");
   const [description, setDescription] = useState("");
   const [photos, setPhotos] = useState([]);
+  const [reservedItems, setReservedItems] = useState([]);
+  const [warehouseItems, setWarehouseItems] = useState([]); // Replace this with your actual data source
+  const [modalVisible, setModalVisible] = useState(false);
+  const [searchText, setSearchText] = useState("");
 
-  // Define savePhotoToFileSystem before using it
-const savePhotoToFileSystem = async (uri) => {
-  try {
-    if (uri.startsWith("file://")) {
-      return uri;
-    }
-
-    const fileName = uri.split("/").pop();
-    const localUri = FileSystem.documentDirectory + fileName;
-
-    const { uri: localFileUri } = await FileSystem.downloadAsync(uri, localUri);
-    return localFileUri;
-  } catch (error) {
-    console.error("Error saving photo:", error);
-    return uri;
-  }
-};
-
+  // Save item with reserved items
   const handleSaveItem = async () => {
     if (!itemName || !description) {
       Alert.alert("Error", "Please enter both item name and description.");
       return;
     }
-  
+
     try {
-      // Save photos to the local file system and store their paths
-      const processedPhotos = await Promise.all(
-        photos.map(async (photo) => {
-          const localUri = await savePhotoToFileSystem(photo.uri);
-          return { uri: localUri };
-        })
-      );
-  
+      Alert.alert("Processing", "Saving item and processing images...");
+      const processedPhotos = await cacheAndSaveImages();
+
       const newItem = {
         id: Date.now().toString(),
         name: itemName,
         description,
-        photos: processedPhotos,
+        photos: processedPhotos.map((photo) => photo.base64),
         dateCreated: new Date().toLocaleString(),
+        reservedItems,
       };
-  
-      // Save to AsyncStorage
+
       const storedItems = await AsyncStorage.getItem("items");
       const items = storedItems ? JSON.parse(storedItems) : [];
       items.push(newItem);
       await AsyncStorage.setItem("items", JSON.stringify(items));
-  
-      console.log("Item saved successfully:", newItem);
-  
-      // Pass the new item back using navigation.setParams
+
       Alert.alert("Success", "Item saved successfully!", [
         {
           text: "OK",
           onPress: () => {
-            console.log("Navigating back with new item...");
             setItemName("");
             setDescription("");
             setPhotos([]);
-            navigation.navigate("Main", { screen: "Warehouse", params: { newItem } }) // Navigate back to the previous screen
+            setReservedItems([]);
+            navigation.goBack();
           },
         },
       ]);
@@ -91,38 +69,92 @@ const savePhotoToFileSystem = async (uri) => {
       Alert.alert("Error", "There was an issue saving the item.");
     }
   };
-  
+
+  // Function to add item to reserved items
+  const handleAddToReserved = (item) => {
+    setReservedItems((prevItems) => [...prevItems, item]);
+  };
+
+  // Function to remove item from reserved items
+  const handleRemoveFromReserved = (itemId) => {
+    setReservedItems((prevItems) =>
+      prevItems.filter((item) => item.id !== itemId)
+    );
+  };
+
+  // Filter warehouse items based on search text
+  const filteredItems = warehouseItems.filter((item) =>
+    item.name.toLowerCase().includes(searchText.toLowerCase())
+  );
+
+  const renderWarehouseItem = ({ item }) => (
+    <TouchableOpacity
+      style={styles.warehouseItemInfo}
+      onPress={() => handleAddToReserved(item)}
+    >
+      <Text style={styles.itemText}>{item.name}</Text>
+    </TouchableOpacity>
+  );
+
+  const renderReservedItem = ({ item }) => (
+    <View style={styles.itemContainer}>
+      <Text style={styles.itemText}>{item.name}</Text>
+      <TouchableOpacity
+        style={styles.removeButton}
+        onPress={() => handleRemoveFromReserved(item.id)}
+      >
+        <Text style={styles.buttonText}>Remove</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.navbar}>
         <Image source={require("../../assets/logo1.png")} style={styles.logo} />
-        <Text style={styles.screenName}>Add Item</Text>
+        <Text style={styles.screenName}>Add Spot</Text>
       </View>
 
       <ScrollView>
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Item Name"
+            placeholder="Spot ID"
             value={itemName}
             onChangeText={setItemName}
           />
           <TextInput
-            style={styles.textArea}
+            style={styles.input}
             placeholder="Description"
             value={description}
             onChangeText={setDescription}
-            multiline={true}
-            numberOfLines={4}
+          />
+
+          {/* Search warehouse items */}
+          <TextInput
+            style={styles.input}
+            placeholder="Search warehouse items"
+            value={searchText}
+            onChangeText={setSearchText}
+          />
+
+          {/* Display the filtered warehouse items */}
+          <FlatList
+            data={filteredItems}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={renderWarehouseItem}
+            ListEmptyComponent={<Text>No items found</Text>}
+          />
+
+          {/* Display reserved items */}
+          <Text style={styles.sectionTitle}>Reserved Items:</Text>
+          <FlatList
+            data={reservedItems}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={renderReservedItem}
+            ListEmptyComponent={<Text>No items added</Text>}
           />
         </View>
-
-        <PhotoPicker
-          photos={photos}
-          onPhotosChange={setPhotos}
-          containerStyle={styles.photosSection}
-        />
 
         <View style={styles.buttonRow}>
           <TouchableOpacity
@@ -132,7 +164,7 @@ const savePhotoToFileSystem = async (uri) => {
             <Text style={styles.buttonText}>Go Back</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.saveButton} onPress={handleSaveItem}>
-            <Text style={styles.buttonText}>Save Item</Text>
+            <Text style={styles.buttonText}>Save Spot</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -243,4 +275,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default AddItemToWarehouse;
+export default AddSpotToWarehouse;

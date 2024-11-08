@@ -6,8 +6,6 @@ import { useNavigation } from "@react-navigation/native";
 const QRCodeScanner = ({ onScanComplete, onClose }) => {
   const [hasPermission, setHasPermission] = useState(null);
   const [scanned, setScanned] = useState(false);
-  const [data, setData] = useState(null);
-  const navigation = useNavigation();
 
   useEffect(() => {
     const getCameraPermissions = async () => {
