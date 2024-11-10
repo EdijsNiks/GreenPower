@@ -39,7 +39,7 @@ const Profile = () => {
 
   const handleLogout = () => {
     /////////// Logout Functionality ///////////
-    AsyncStorage.removeItem("myKey")
+    AsyncStorage.clear()
       .then(() => {
         navigation.replace("Login");
       })

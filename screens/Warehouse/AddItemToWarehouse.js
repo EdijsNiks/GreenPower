@@ -15,6 +15,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from "expo-file-system";
 import PhotoPicker from "../../components/PhotoPicker";
+import 'react-native-get-random-values'; // Polyfill for random values
+import { v4 as uuidv4 } from 'uuid';
+
 
 const { width } = Dimensions.get("window");
 
@@ -22,67 +25,72 @@ const AddItemToWarehouse = () => {
   const navigation = useNavigation();
   const [itemName, setItemName] = useState("");
   const [description, setDescription] = useState("");
+  const [count, setCount] = useState("");
+  const [reserved, setReserved] = useState([]);
+  const [category, setCategory] = useState("");
   const [photos, setPhotos] = useState([]);
 
-  // Define savePhotoToFileSystem before using it
-const savePhotoToFileSystem = async (uri) => {
-  try {
-    if (uri.startsWith("file://")) {
+  const savePhotoToFileSystem = async (uri) => {
+    try {
+      if (uri.startsWith("file://")) {
+        return uri;
+      }
+
+      const fileName = uri.split("/").pop();
+      const localUri = FileSystem.documentDirectory + fileName;
+
+      const { uri: localFileUri } = await FileSystem.downloadAsync(uri, localUri);
+      return localFileUri;
+    } catch (error) {
+      console.error("Error saving photo:", error);
       return uri;
     }
+  };
 
-    const fileName = uri.split("/").pop();
-    const localUri = FileSystem.documentDirectory + fileName;
+  const generateUniqueId = () => uuidv4();
 
-    const { uri: localFileUri } = await FileSystem.downloadAsync(uri, localUri);
-    return localFileUri;
-  } catch (error) {
-    console.error("Error saving photo:", error);
-    return uri;
-  }
-};
 
   const handleSaveItem = async () => {
-    if (!itemName || !description) {
-      Alert.alert("Error", "Please enter both item name and description.");
+    if (!itemName || !description || !count || !category) {
+      Alert.alert("Error", "Please enter all required fields.");
       return;
     }
-  
+
     try {
-      // Save photos to the local file system and store their paths
       const processedPhotos = await Promise.all(
         photos.map(async (photo) => {
           const localUri = await savePhotoToFileSystem(photo.uri);
           return { uri: localUri };
         })
       );
-  
+
       const newItem = {
-        id: Date.now().toString(),
+        id: generateUniqueId(),
         name: itemName,
-        description,
+        description: description,
+        count: parseInt(count, 10),
+        reserved: reserved,
+        category: category,
         photos: processedPhotos,
         dateCreated: new Date().toLocaleString(),
       };
-  
-      // Save to AsyncStorage
+
       const storedItems = await AsyncStorage.getItem("items");
       const items = storedItems ? JSON.parse(storedItems) : [];
       items.push(newItem);
       await AsyncStorage.setItem("items", JSON.stringify(items));
-  
-      console.log("Item saved successfully:", newItem);
-  
-      // Pass the new item back using navigation.setParams
+
       Alert.alert("Success", "Item saved successfully!", [
         {
           text: "OK",
           onPress: () => {
-            console.log("Navigating back with new item...");
             setItemName("");
             setDescription("");
+            setCount("");
+            setReserved([]);
+            setCategory("");
             setPhotos([]);
-            navigation.navigate("Main", { screen: "Warehouse", params: { newItem } }) // Navigate back to the previous screen
+            navigation.navigate("Main", { screen: "Warehouse", params: { newItem } });
           },
         },
       ]);
@@ -91,7 +99,6 @@ const savePhotoToFileSystem = async (uri) => {
       Alert.alert("Error", "There was an issue saving the item.");
     }
   };
-  
 
   return (
     <SafeAreaView style={styles.container}>
@@ -109,12 +116,25 @@ const savePhotoToFileSystem = async (uri) => {
             onChangeText={setItemName}
           />
           <TextInput
-            style={styles.textArea}
+            style={styles.input}
             placeholder="Description"
             value={description}
             onChangeText={setDescription}
-            multiline={true}
+            multiline
             numberOfLines={4}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Count"
+            value={count}
+            onChangeText={setCount}
+            keyboardType="numeric"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Category"
+            value={category}
+            onChangeText={setCategory}
           />
         </View>
 
@@ -192,33 +212,6 @@ const styles = StyleSheet.create({
   photosSection: {
     padding: 20,
   },
-  photosTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  addPhotoButton: {
-    backgroundColor: "#A4D337",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 5,
-    alignSelf: "flex-end",
-    marginBottom: 10,
-  },
-  photoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  photoGallery: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-  },
-  photo: {
-    width: 100,
-    height: 100,
-    marginRight: 10,
-    marginBottom: 10,
-  },
   buttonRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -237,6 +230,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 5,
   },
+  toggleButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+    alignItems: "center",
+  },
+  buttonReserved: {
+    backgroundColor: "green",
+  },
+  buttonNotReserved: {
+    backgroundColor: "gray",
+  },
   buttonText: {
     color: "white",
     fontWeight: "bold",
@@ -244,3 +249,5 @@ const styles = StyleSheet.create({
 });
 
 export default AddItemToWarehouse;
+
+

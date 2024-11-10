@@ -70,12 +70,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 10,
   },
-  addPhotoButton: {
-    backgroundColor: "#A4D337",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 5,
-  },
   buttonText: {
     color: "white",
     fontWeight: "bold",
@@ -87,7 +81,7 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   photo: {
-    width: width * 0.28,  // Dynamic width to fit 3 photos in a row
+    width: width * 0.28, // Dynamic width to fit 3 photos in a row
     height: width * 0.28, // Keeping it square
     borderRadius: 8,
     marginBottom: 10,
@@ -114,19 +108,158 @@ const styles = StyleSheet.create({
   photoContainer: {
     margin: 5,
     borderRadius: 8,
-    overflow: 'hidden',
+    overflow: "hidden",
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
   },
   noPhotosText: {
-    color: '#666',
-    fontStyle: 'italic',
-    textAlign: 'center',
+    color: "#666",
+    fontStyle: "italic",
+    textAlign: "center",
     padding: 20,
-  }
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  reserveSection: {
+    marginTop: 20,
+    padding: 15,
+    backgroundColor: "#f5f5f5",
+    borderRadius: 8,
+    marginHorizontal: 10,
+    marginBottom: 20,
+  },
+  reserveTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 10,
+    color: "#333",
+  },
+  projectsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+  projectItem: {
+    width: "48%",
+    padding: 15,
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#ddd",
+  },
+  selectedProject: {
+    backgroundColor: "#A4D337",
+    borderColor: "black",
+  },
+  projectText: {
+    fontSize: 16,
+    textAlign: "center",
+    color: "#333",
+  },
+  selectedProjectText: {
+    color: "#fff",
+  },
+  quantityInput: {
+    backgroundColor: "#fff",
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    fontSize: 16,
+    marginBottom: 20,
+  },
+  saveButton: {
+    backgroundColor: "#A4D337",
+    padding: 15,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  saveButtonDisabled: {
+    backgroundColor: "#ccc",
+    padding: 15,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  buttonTextDisabled: {
+    color: "#666",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  photosSectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+    width: "100%",
+  },
+  addPhotoButton: {
+    backgroundColor: "#A4D337",
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 5,
+  },
+  reservationsContainer: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#ddd",
+  },
+  reservationsTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 5,
+    color: "#333",
+  },
+  reservationItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 5,
+  },
+  reservationText: {
+    fontSize: 14,
+    color: "#666",
+  },
+  clearReservationButton: {
+    backgroundColor: "#ff6b6b",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+  },
+  clearReservationText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  modalBackground: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+  },
+  fullScreenImage: {
+    width: "90%",
+    height: "80%",
+    resizeMode: "contain",
+  },
+  closeButton: {
+    position: "absolute",
+    top: 20,
+    right: 20,
+    backgroundColor: "#A4D337",
+    padding: 10,
+    borderRadius: 50,
+  },
+  closeButtonText: {
+    color: "white",
+    fontWeight: "bold",
+  },
 });
 
 export default styles;

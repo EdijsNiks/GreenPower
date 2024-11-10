@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useState, useEffect } from "react";
+import React, { useLayoutEffect, useState, useCallback } from "react";
 import {
   StyleSheet,
   Text,
@@ -11,24 +11,17 @@ import {
   FlatList,
   Modal,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Fontisto from "@expo/vector-icons/Fontisto";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 
 const { width } = Dimensions.get("window");
 
-const tasksData = Array.from({ length: 30 }, (_, i) => ({
-  id: i + 1,
-  title: `Task ${i + 1}`,
-  category: i % 2 === 0 ? "Work" : "Personal",
-  completed: i % 3 === 0,
-}));
-
 const Projects = () => {
   const navigation = useNavigation();
   const [currentUser, setCurrentUser] = useState("");
-  const [taskList, setTaskList] = useState(tasksData);
+  const [taskList, setTaskList] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredTaskList, setFilteredTaskList] = useState([]);
   const [isFilterModalVisible, setFilterModalVisible] = useState(false);
@@ -36,19 +29,25 @@ const Projects = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const tasksPerPage = 10;
 
-  useEffect(() => {
-    AsyncStorage.getItem("myKey")
-      .then((stringifiedData) => {
-        if (stringifiedData !== null) {
-          const data = JSON.parse(stringifiedData);
-          console.log("User data retrieved from AsyncStorage:", data);
-          setCurrentUser(data);
+  // Fetch projects data from AsyncStorage whenever screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      const loadProjects = async () => {
+        try {
+          const storedProjects = await AsyncStorage.getItem("projects");
+          if (storedProjects) {
+            const parsedProjects = JSON.parse(storedProjects);
+            console.log("Projects data retrieved from AsyncStorage:", parsedProjects);
+            setTaskList(parsedProjects);
+          }
+        } catch (error) {
+          console.error("Error loading projects data:", error);
         }
-      })
-      .catch((error) => {
-        console.error("Error retrieving data:", error);
-      });
-  }, []);
+      };
+
+      loadProjects();
+    }, [])
+  );
 
   const toggleTaskCompletion = (taskId) => {
     setTaskList((prevTaskList) =>
@@ -66,7 +65,7 @@ const Projects = () => {
 
   const handleSearch = (text) => {
     setSearchQuery(text);
-    const filteredData = tasksData.filter((task) =>
+    const filteredData = taskList.filter((task) =>
       task.title.toLowerCase().includes(text.toLowerCase())
     );
     setFilteredTaskList(filteredData);
@@ -74,46 +73,34 @@ const Projects = () => {
 
   const handleFilter = (category) => {
     if (selectedCategories.includes(category)) {
-      // If already selected, remove it
       setSelectedCategories(
         selectedCategories.filter((cat) => cat !== category)
       );
     } else {
-      // Otherwise, add it
       setSelectedCategories([...selectedCategories, category]);
     }
 
-    const filteredData = tasksData.filter(
+    const filteredData = taskList.filter(
       (task) =>
         selectedCategories.includes(task.category) || task.category === category
     );
     setTaskList(filteredData);
-    // Don't close modal
   };
 
   const clearSelection = () => {
     setSelectedCategories([]);
-    setTaskList(tasksData); // Reset task list to original data
+    setTaskList(taskList); // Reset task list to original data
     setFilterModalVisible(false); // Optionally close the modal when clearing selection
   };
 
   const renderTaskItem = ({ item }) => (
     <TouchableOpacity
-      onPress={() => navigation.navigate("TasksItemInfo", { taskId: item.id })}
+      onPress={() => navigation.navigate("TasksItemInfo", { taskId: item.id, project: item,})}
     >
       <View style={styles.taskItem}>
         <View style={styles.taskLeft}>
           <View style={styles.taskCircle}></View>
-          <Text style={styles.taskTitle}>{item.title}</Text>
-        </View>
-        <View style={styles.taskRight}>
-          <TouchableOpacity onPress={() => toggleTaskCompletion(item.id)}>
-            {item.completed ? (
-              <Fontisto name="checkbox-active" size={24} color="black" />
-            ) : (
-              <Fontisto name="checkbox-passive" size={24} color="black" />
-            )}
-          </TouchableOpacity>
+          <Text style={styles.taskTitle}>{item.name}</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -206,9 +193,6 @@ const Projects = () => {
               >
                 <Text style={styles.buttonText}>Work</Text>
               </TouchableOpacity>
-              {selectedCategories.includes("Work") && (
-                <Text style={styles.indicator}>✔</Text>
-              )}
             </View>
             <View style={styles.buttonWrapper}>
               <TouchableOpacity
@@ -221,12 +205,7 @@ const Projects = () => {
               >
                 <Text style={styles.buttonText}>Personal</Text>
               </TouchableOpacity>
-              {selectedCategories.includes("Personal") && (
-                <Text style={styles.indicator}>✔</Text>
-              )}
             </View>
-
-            {/* Clear and Close buttons in the same row */}
             <View style={styles.buttonRow}>
               <TouchableOpacity
                 style={styles.clearButton}
@@ -247,7 +226,6 @@ const Projects = () => {
     </SafeAreaView>
   );
 };
-
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -390,7 +368,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: "#D8BFD8",
+    backgroundColor: "#A4D337",
     marginRight: 10,
   },
   taskTitle: {

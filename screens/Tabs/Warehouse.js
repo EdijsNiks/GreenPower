@@ -1,4 +1,9 @@
-import React, { useState, useEffect, useCallback, useLayoutEffect } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useLayoutEffect,
+} from "react";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import {
   Text,
@@ -13,12 +18,14 @@ import {
 } from "react-native";
 import { Camera } from "expo-camera";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
+import AsyncStorage from "@react-native-async-storage/async-storage"; // Import AsyncStorage
 import FilterModalWarehouse from "../../components/FilterModalWarehouse";
 import Pagination from "../../components/Pagination";
 import QRCodeScanner from "../../components/QRCodeScanner";
 import styles from "../../styles/WarehouseStyles.js";
 import WarehouseSpots from "../../components/WarehouseSpots.js";
 import { mockData } from "../../mockData.js";
+
 const Warehouse = ({ route }) => {
   const navigation = useNavigation();
   const [currentUser, setCurrentUser] = useState(mockData.profile.username);
@@ -33,20 +40,62 @@ const Warehouse = ({ route }) => {
   const tasksPerPage = 10;
   const [savedData, setSavedData] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const [updatedTaskList, setUpdatedTaskList] = useState([]);
+
+  // Load task list from AsyncStorage on component mount
+  useFocusEffect(
+    useCallback(() => {
+      const loadItems = async () => {
+        try {
+          const storedItems = await AsyncStorage.getItem("items");
+          if (storedItems) {
+            setTaskList(JSON.parse(storedItems));
+            console.log(storedItems);
+          }
+        } catch (error) {
+          console.error("Error loading items:", error);
+        }
+      };
+
+      loadItems();
+    }, [])
+  );
+
+  // Update taskList with new item from AddItemToWarehouse screen and save to AsyncStorage
+  useEffect(() => {
+    if (route?.params?.newItem) {
+      const updateItems = async () => {
+        const updatedItems = [...taskList, route.params.newItem];
+        try {
+          await AsyncStorage.setItem("items", JSON.stringify(updatedItems));
+          setTaskList(updatedItems);
+        } catch (error) {
+          console.error("Error saving items:", error);
+        }
+      };
+
+      updateItems();
+    }
+  }, [route?.params?.newItem]);
 
   useEffect(() => {
-    // Check if a new item was passed back from the AddItemToWarehouse screen
-    if (route?.params?.newItem) {
-      // Add the new item to the current list of items
-      const updatedItems = [route.params.newItem];
-      setTaskList(updatedItems);  // Update the state properly
+    if (route?.params?.updatedItem) {
+      const updateItem = async () => {
+        const updatedItems = taskList.map((item) =>
+          item.id === route.params.updatedItem.id
+            ? route.params.updatedItem
+            : item
+        );
+        try {
+          await AsyncStorage.setItem("items", JSON.stringify(updatedItems));
+          setTaskList(updatedItems);
+        } catch (error) {
+          console.error("Error updating items:", error);
+        }
+      };
 
-      console.log(updatedItems);
-      // Store the updated items in AsyncStorage
-     // AsyncStorage.setItem("items", JSON.stringify(updatedItems));
+      updateItem();
     }
-  }, [route?.params?.newItem]); // Run when newItem is passed
+  }, [route?.params?.updatedItem]);
 
   // Request camera permission
   useEffect(() => {
@@ -83,34 +132,31 @@ const Warehouse = ({ route }) => {
     setModalVisible(true);
     setShowScanner(false);
   };
+
   const handleSearch = (text) => {
     setSearchQuery(text);
-    
     const filteredData = mockData.warehouse.filter((task) =>
       task.title ? task.title.toLowerCase().includes(text.toLowerCase()) : false
     );
-    
     setFilteredTaskList(filteredData);
   };
-  
 
   const renderTaskItem = ({ item }) => {
     let backgroundColor;
-
     if (item.count === 0) {
-      backgroundColor = "red"; // Red if count is zero
-    } else if (item.reserved) {
-      backgroundColor = "green"; // Green if item is reserved and has stock
+      backgroundColor = "red";
+    } else if (item.isReserved) {
+      backgroundColor = "green";
     } else {
-      backgroundColor = "#D3D3D3"; // Grey if it has stock but is not reserved
+      backgroundColor = "#D3D3D3";
     }
 
     return (
       <TouchableOpacity
         onPress={() =>
           navigation.navigate("WarehouseItemInfo", {
-          itemData: item, // Pass the entire item object
-        })
+            itemData: item,
+          })
         }
       >
         <View style={[styles.taskItem, { backgroundColor }]}>
@@ -125,6 +171,13 @@ const Warehouse = ({ route }) => {
   const currentPageData = taskList.slice(
     (currentPage - 1) * tasksPerPage,
     currentPage * tasksPerPage
+  );
+
+  const data = (searchQuery ? filteredTaskList : currentPageData).map(
+    (item) => ({
+      ...item,
+      id: item.id || `temp-${Math.random()}`, // Fallback unique ID
+    })
   );
 
   return (
@@ -200,7 +253,7 @@ const Warehouse = ({ route }) => {
       </Modal>
 
       <FlatList
-        data={searchQuery ? filteredTaskList : currentPageData}
+        data={data}
         renderItem={renderTaskItem}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.taskList}
@@ -229,7 +282,7 @@ const Warehouse = ({ route }) => {
       />
       <WarehouseSpots
         isVisible={modalVisible}
-        spotData={savedData}
+        spotId={savedData}
         onClose={() => {
           setModalVisible(false);
           setSavedData(null);

@@ -11,7 +11,7 @@ import {
 import * as ImagePicker from "expo-image-picker";
 
 const PhotoPicker = ({ photos, onPhotosChange, containerStyle }) => {
-  const [selectedPhoto, setSelectedPhoto] = useState(null); // Track the selected image
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
 
   const requestPermissions = async (source) => {
     let permissionResult;
@@ -19,8 +19,7 @@ const PhotoPicker = ({ photos, onPhotosChange, containerStyle }) => {
     if (source === "camera") {
       permissionResult = await ImagePicker.requestCameraPermissionsAsync();
     } else {
-      permissionResult =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     }
 
     if (!permissionResult.granted) {
@@ -34,12 +33,18 @@ const PhotoPicker = ({ photos, onPhotosChange, containerStyle }) => {
     }
     return true;
   };
+
   const handleImagePress = (photo) => {
-    setSelectedPhoto(photo); // Set the selected photo to show in full screen
+    setSelectedPhoto(photo);
   };
 
   const closeFullScreen = () => {
-    setSelectedPhoto(null); // Close full screen mode
+    setSelectedPhoto(null);
+  };
+
+  const removePhoto = (indexToRemove) => {
+    const newPhotos = photos.filter((_, index) => index !== indexToRemove);
+    onPhotosChange(newPhotos);
   };
 
   const pickImage = async (source) => {
@@ -86,26 +91,27 @@ const PhotoPicker = ({ photos, onPhotosChange, containerStyle }) => {
     <View style={[styles.container, containerStyle]}>
       <View style={styles.photoRow}>
         <Text style={styles.photosTitle}>PHOTOS</Text>
-        <TouchableOpacity
-          style={styles.addPhotoButton}
-          onPress={handleAddPhoto}
-        >
+        <TouchableOpacity style={styles.addPhotoButton} onPress={handleAddPhoto}>
           <Text style={styles.buttonText}>Add Photo</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.photoGallery}>
         {photos.map((photo, index) => (
-          <TouchableOpacity key={index} onPress={() => handleImagePress(photo)}>
-            <Image
-              key={index}
-              source={{ uri: photo.uri }}
-              style={styles.photo}
-            />
-          </TouchableOpacity>
+          <View key={index} style={styles.photoContainer}>
+            <TouchableOpacity onPress={() => handleImagePress(photo)}>
+              <Image source={{ uri: photo.uri }} style={styles.photo} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={() => removePhoto(index)}
+            >
+              <Text style={styles.deleteButtonText}>×</Text>
+            </TouchableOpacity>
+          </View>
         ))}
       </View>
-      {/* Modal for Full-Screen Image */}
+
       {selectedPhoto && (
         <Modal
           visible={!!selectedPhoto}
@@ -114,10 +120,7 @@ const PhotoPicker = ({ photos, onPhotosChange, containerStyle }) => {
           onRequestClose={closeFullScreen}
         >
           <View style={styles.modalBackground}>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={closeFullScreen}
-            >
+            <TouchableOpacity style={styles.closeButton} onPress={closeFullScreen}>
               <Text style={styles.closeButtonText}>X</Text>
             </TouchableOpacity>
             <Image
@@ -160,10 +163,38 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 8,
   },
+  photoContainer: {
+    position: "relative",
+  },
   photo: {
     width: 100,
     height: 100,
     borderRadius: 8,
+  },
+  deleteButton: {
+    position: "absolute",
+    top: -8,
+    right: -8,
+    backgroundColor: "red",
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  deleteButtonText: {
+    color: "white",
+    fontSize: 18,
+    fontWeight: "bold",
+    lineHeight: 22,
   },
   modalBackground: {
     flex: 1,

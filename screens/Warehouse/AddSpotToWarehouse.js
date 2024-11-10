@@ -5,108 +5,61 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Dimensions,
   Alert,
   TextInput,
   Image,
-  FlatList,
+  Dimensions
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
 const { width } = Dimensions.get("window");
 
 const AddSpotToWarehouse = () => {
   const navigation = useNavigation();
-  const [itemName, setItemName] = useState("");
+  const [spotId, setSpotId] = useState("");
   const [description, setDescription] = useState("");
-  const [photos, setPhotos] = useState([]);
-  const [reservedItems, setReservedItems] = useState([]);
-  const [warehouseItems, setWarehouseItems] = useState([]); // Replace this with your actual data source
-  const [modalVisible, setModalVisible] = useState(false);
-  const [searchText, setSearchText] = useState("");
 
-  // Save item with reserved items
-  const handleSaveItem = async () => {
-    if (!itemName || !description) {
-      Alert.alert("Error", "Please enter both item name and description.");
+  const saveSpot = async () => {
+    if (!spotId || !description) {
+      Alert.alert("Error", "Please enter both spot ID and description.");
       return;
     }
 
     try {
-      Alert.alert("Processing", "Saving item and processing images...");
-      const processedPhotos = await cacheAndSaveImages();
-
-      const newItem = {
+      // Create new spot object
+      const newSpot = {
         id: Date.now().toString(),
-        name: itemName,
+        spotId,
         description,
-        photos: processedPhotos.map((photo) => photo.base64),
-        dateCreated: new Date().toLocaleString(),
-        reservedItems,
+        dateCreated: new Date().toISOString(),
+        reservedItems: [],
       };
 
-      const storedItems = await AsyncStorage.getItem("items");
-      const items = storedItems ? JSON.parse(storedItems) : [];
-      items.push(newItem);
-      await AsyncStorage.setItem("items", JSON.stringify(items));
+      // Get existing spots from storage
+      const existingSpots = await AsyncStorage.getItem("spots");
+      const spots = existingSpots ? JSON.parse(existingSpots) : [];
 
-      Alert.alert("Success", "Item saved successfully!", [
+      // Add new spot and save back to storage
+      spots.push(newSpot);
+      await AsyncStorage.setItem("spots", JSON.stringify(spots));
+
+      Alert.alert("Success", "Spot saved successfully!", [
         {
           text: "OK",
           onPress: () => {
-            setItemName("");
+            setSpotId("");
             setDescription("");
-            setPhotos([]);
-            setReservedItems([]);
+            console.log(spots);
             navigation.goBack();
           },
         },
       ]);
     } catch (error) {
-      console.error("Error saving item:", error);
-      Alert.alert("Error", "There was an issue saving the item.");
+      console.error("Error saving spot:", error);
+      Alert.alert("Error", "There was an issue saving the spot.");
     }
   };
-
-  // Function to add item to reserved items
-  const handleAddToReserved = (item) => {
-    setReservedItems((prevItems) => [...prevItems, item]);
-  };
-
-  // Function to remove item from reserved items
-  const handleRemoveFromReserved = (itemId) => {
-    setReservedItems((prevItems) =>
-      prevItems.filter((item) => item.id !== itemId)
-    );
-  };
-
-  // Filter warehouse items based on search text
-  const filteredItems = warehouseItems.filter((item) =>
-    item.name.toLowerCase().includes(searchText.toLowerCase())
-  );
-
-  const renderWarehouseItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.warehouseItemInfo}
-      onPress={() => handleAddToReserved(item)}
-    >
-      <Text style={styles.itemText}>{item.name}</Text>
-    </TouchableOpacity>
-  );
-
-  const renderReservedItem = ({ item }) => (
-    <View style={styles.itemContainer}>
-      <Text style={styles.itemText}>{item.name}</Text>
-      <TouchableOpacity
-        style={styles.removeButton}
-        onPress={() => handleRemoveFromReserved(item.id)}
-      >
-        <Text style={styles.buttonText}>Remove</Text>
-      </TouchableOpacity>
-    </View>
-  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -120,39 +73,15 @@ const AddSpotToWarehouse = () => {
           <TextInput
             style={styles.input}
             placeholder="Spot ID"
-            value={itemName}
-            onChangeText={setItemName}
+            value={spotId}
+            onChangeText={setSpotId}
           />
           <TextInput
             style={styles.input}
             placeholder="Description"
             value={description}
             onChangeText={setDescription}
-          />
-
-          {/* Search warehouse items */}
-          <TextInput
-            style={styles.input}
-            placeholder="Search warehouse items"
-            value={searchText}
-            onChangeText={setSearchText}
-          />
-
-          {/* Display the filtered warehouse items */}
-          <FlatList
-            data={filteredItems}
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={renderWarehouseItem}
-            ListEmptyComponent={<Text>No items found</Text>}
-          />
-
-          {/* Display reserved items */}
-          <Text style={styles.sectionTitle}>Reserved Items:</Text>
-          <FlatList
-            data={reservedItems}
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={renderReservedItem}
-            ListEmptyComponent={<Text>No items added</Text>}
+            multiline
           />
         </View>
 
@@ -163,7 +92,10 @@ const AddSpotToWarehouse = () => {
           >
             <Text style={styles.buttonText}>Go Back</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.saveButton} onPress={handleSaveItem}>
+          <TouchableOpacity 
+            style={styles.saveButton} 
+            onPress={saveSpot}
+          >
             <Text style={styles.buttonText}>Save Spot</Text>
           </TouchableOpacity>
         </View>
@@ -171,7 +103,6 @@ const AddSpotToWarehouse = () => {
     </SafeAreaView>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

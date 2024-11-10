@@ -8,7 +8,6 @@ import {
   ScrollView,
   Dimensions,
   Modal,
-  FlatList,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -19,23 +18,62 @@ const { width } = Dimensions.get("window");
 const ProjectsInfo = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { taskId } = route.params; // Get the task ID from the route params
+  const { project, taskId } = route.params; // Get project data from route params
   const [modalVisible, setModalVisible] = useState(false);
 
+  if (!project) {
+    return <Text>No project data available</Text>;
+  }
+  // Static data for reserved items based on the newItem model
   const [reservedItems, setReservedItems] = useState([
-    { id: 1, name: "Item 1" },
-    { id: 2, name: "Item 2" },
+    {
+      id: "1",
+      name: "Reserved Item 1",
+      description: "Description for Reserved Item 1",
+      count: 10,
+      reserved: [],
+      category: "Category A",
+      photos: ["https://example.com/photo1.jpg"],
+      dateCreated: new Date().toLocaleString(),
+    },
+    {
+      id: "2",
+      name: "Reserved Item 2",
+      description: "Description for Reserved Item 2",
+      count: 5,
+      reserved: [],
+      category: "Category B",
+      photos: ["https://example.com/photo2.jpg"],
+      dateCreated: new Date().toLocaleString(),
+    },
   ]);
 
-  // Warehouse items that are not reserved yet
+  // Static data for unreserved warehouse items
   const warehouseItems = [
-    { id: 3, name: "Item 3" },
-    { id: 4, name: "Item 4" },
+    {
+      id: "3",
+      name: "Warehouse Item 3",
+      description: "Description for Warehouse Item 3",
+      count: 20,
+      reserved: [],
+      category: "Category C",
+      photos: ["https://example.com/photo3.jpg"],
+      dateCreated: new Date().toLocaleString(),
+    },
+    {
+      id: "4",
+      name: "Warehouse Item 4",
+      description: "Description for Warehouse Item 4",
+      count: 15,
+      reserved: [],
+      category: "Category D",
+      photos: ["https://example.com/photo4.jpg"],
+      dateCreated: new Date().toLocaleString(),
+    },
   ];
 
   const onAdd = (item) => {
-    // Adding the project ID when reserving an item
-    const reservedItem = { ...item, projectId: taskId };
+    const reservedItem = { ...item, projectId: project.id };
     setReservedItems([...reservedItems, reservedItem]);
   };
 
@@ -43,19 +81,9 @@ const ProjectsInfo = () => {
     setReservedItems(reservedItems.filter((item) => item.id !== itemId));
   };
 
-  // Fetch task details using taskId (static data for now)
-  const task = {
-    name: "Project Name",
-    category: "Project Category",
-    creator: "Jeff",
-    date: "03.09.2024 09:40",
-    description: "Project description here...",
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       {/* Navbar */}
-
       <View style={styles.navbar}>
         <Image source={require("../../assets/logo1.png")} style={styles.logo} />
         <Text style={styles.screenName}>PROJECT INFO</Text>
@@ -63,16 +91,15 @@ const ProjectsInfo = () => {
 
       <View style={styles.backButtonContainer}></View>
       <ScrollView>
-        {/* Task Info Section */}
-        <View style={styles.taskInfo}>
-          <Text style={styles.infoText}>NAME: {task.name}</Text>
-          <Text style={styles.infoText}>Category: {task.category}</Text>
-          <Text style={styles.infoText}>
-            Created by: {task.creator} at {task.date}
-          </Text>
+        {/* Project Info Section */}
+        <View style={styles.projectInfo}>
+          <Text style={styles.infoText}>NAME: {project.name}</Text>
+          <Text style={styles.infoText}>Category: {project.category}</Text>
+          <Text style={styles.infoText}>Created at: {project.dateCreated}</Text>
         </View>
 
         <View style={styles.paddingBetweenSection}></View>
+
         {/* Reserved Item Info Section */}
         <View style={styles.reservedItemsSection}>
           <Text style={styles.sectionTitle}>Reserved Items</Text>
@@ -86,13 +113,11 @@ const ProjectsInfo = () => {
 
         {/* Buttons */}
         <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.finishButtonBack}>
-            <Text
-              style={styles.buttonText}
-              onPress={() => navigation.navigate("Main", { screen: "Tasks" })}
-            >
-              Go back
-            </Text>
+          <TouchableOpacity
+            style={styles.finishButtonBack}
+            onPress={() => navigation.navigate("Main", { screen: "Tasks" })}
+          >
+            <Text style={styles.buttonText}>Go back</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.editButton}>
             <Text style={styles.buttonText}>Edit Info</Text>
@@ -102,9 +127,9 @@ const ProjectsInfo = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Task Description */}
-        <Text style={styles.description}>TASK DESCRIPTION</Text>
-        <Text style={styles.descriptionText}>{task.description}</Text>
+        {/* Project Description */}
+        <Text style={styles.description}>PROJECT DESCRIPTION</Text>
+        <Text style={styles.descriptionText}>{project.description}</Text>
 
         {/* Photos Section */}
         <View style={styles.photosSection}>
@@ -115,9 +140,9 @@ const ProjectsInfo = () => {
             </TouchableOpacity>
           </View>
           <View style={styles.photoGallery}>
-            <View style={styles.photo}></View>
-            <View style={styles.photo}></View>
-            <View style={styles.photo}></View>
+            {project.photos.map((photo, index) => (
+              <Image key={index} source={{ uri: photo }} style={styles.photo} />
+            ))}
           </View>
         </View>
 
@@ -130,13 +155,12 @@ const ProjectsInfo = () => {
           onAdd={onAdd}
           onRemove={onRemove}
           navigation={navigation}
-          taskId={taskId}
+          taskId={project.id}
         />
       </ScrollView>
     </SafeAreaView>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -307,6 +331,12 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "white",
     fontWeight: "bold",
+  },
+  projectInfo: {
+    paddingHorizontal: 20,
+    backgroundColor: "#A4D337",
+    paddingVertical: 20,
+    borderRadius: 5,
   },
 });
 

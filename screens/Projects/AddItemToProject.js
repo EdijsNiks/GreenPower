@@ -13,8 +13,10 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
 const { width } = Dimensions.get("window");
+import * as FileSystem from "expo-file-system";
+import 'react-native-get-random-values'; // Polyfill for random values
+import { v4 as uuidv4 } from 'uuid';
 
 const AddItemToProject = () => {
   const navigation = useNavigation();
@@ -22,7 +24,33 @@ const AddItemToProject = () => {
   // States for input fields
   const [projectName, setProjectName] = useState("");
   const [description, setDescription] = useState("");
+  const [categoryName, setCategoryName] = useState("");
+  const [isFinished, setIsFinished] = useState(false);
   const [photos, setPhotos] = useState([]);
+  const [reserved, setReserved] = useState([]);
+
+  // Function to save photo to local file system if needed
+  const savePhotoToFileSystem = async (uri) => {
+    try {
+      if (uri.startsWith("file://")) {
+        return uri;
+      }
+
+      const fileName = uri.split("/").pop();
+      const localUri = FileSystem.documentDirectory + fileName;
+
+      const { uri: localFileUri } = await FileSystem.downloadAsync(
+        uri,
+        localUri
+      );
+      return localFileUri;
+    } catch (error) {
+      console.error("Error saving photo:", error);
+      return uri;
+    }
+  };
+  const generateUniqueId = () => uuidv4();
+
 
   // Handle Save
   const handleSaveProject = async () => {
@@ -31,26 +59,49 @@ const AddItemToProject = () => {
       return;
     }
 
-    const newProject = {
-      name: projectName,
-      description: description,
-      photos: photos,
-      dateCreated: new Date().toLocaleString(),
-    };
-
     try {
+      // Process photos to save to file system if needed
+      const processedPhotos = await Promise.all(
+        photos.map(async (photo) => {
+          const localUri = await savePhotoToFileSystem(photo.uri);
+          return { uri: localUri };
+        })
+      );
+
+
+      const newProject = {
+        id: generateUniqueId(),
+        name: projectName,
+        description: description,
+        photos: processedPhotos,
+        category: categoryName,
+        finished: isFinished,
+        reserved: reserved,
+        dateCreated: new Date().toLocaleString(),
+      };
+
       const storedProjects = await AsyncStorage.getItem("projects");
       const projects = storedProjects ? JSON.parse(storedProjects) : [];
       projects.push(newProject);
       await AsyncStorage.setItem("projects", JSON.stringify(projects));
-      
-      Alert.alert("Success", "Project saved successfully!");
-      console.log("Project saved:", newProject);
-      
-      // Optionally, clear input fields after saving
-      setProjectName("");
-      setDescription("");
-      setPhotos([]);
+      console.log(projects);
+      Alert.alert("Success", "Project saved successfully!", [
+        {
+          text: "OK",
+          onPress: () => {
+            setProjectName("");
+            setDescription("");
+            setCategoryName("");
+            setReserved(false);
+            setPhotos([]);
+
+            navigation.navigate("Main", {
+              screen: "Projects",
+              params: { newProject },
+            });
+          },
+        },
+      ]);
     } catch (error) {
       console.error("Error saving project:", error);
       Alert.alert("Error", "There was an issue saving the project.");
@@ -59,20 +110,20 @@ const AddItemToProject = () => {
 
   // Add photo logic (stubbed for now)
   const handleAddPhoto = () => {
-    // For now, just simulate adding a photo as text
-    setPhotos([...photos, `Photo ${photos.length + 1}`]);
+    setPhotos([
+      ...photos,
+      { uri: `https://example.com/photo${photos.length + 1}.jpg` },
+    ]);
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Navbar */}
       <View style={styles.navbar}>
         <Image source={require("../../assets/logo1.png")} style={styles.logo} />
         <Text style={styles.screenName}>Add Project</Text>
       </View>
 
       <ScrollView>
-        {/* Input Fields */}
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
@@ -85,38 +136,51 @@ const AddItemToProject = () => {
             placeholder="Description"
             value={description}
             onChangeText={setDescription}
-            multiline={true}
+            multiline
             numberOfLines={4}
+          />
+          <TextInput
+            style={styles.textArea}
+            placeholder="Category"
+            value={categoryName}
+            onChangeText={setCategoryName}
+            multiline
+            numberOfLines={1}
           />
         </View>
 
-        {/* Photos Section */}
         <View style={styles.photosSection}>
           <View style={styles.photoRow}>
             <Text style={styles.photosTitle}>PHOTOS</Text>
-            <TouchableOpacity style={styles.addPhotoButton} onPress={handleAddPhoto}>
+            <TouchableOpacity
+              style={styles.addPhotoButton}
+              onPress={handleAddPhoto}
+            >
               <Text style={styles.buttonText}>Add Photo</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Display added photos */}
           <View style={styles.photoGallery}>
             {photos.map((photo, index) => (
               <View key={index} style={styles.photo}>
-                <Text>{photo}</Text>
+                <Text>{photo.uri}</Text>
               </View>
             ))}
           </View>
         </View>
 
-        {/* Buttons */}
         <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
             <Text style={styles.buttonText}>Go Back</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.saveButton} onPress={handleSaveProject}>
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={handleSaveProject}
+          >
             <Text style={styles.buttonText}>Save Project</Text>
-            
           </TouchableOpacity>
         </View>
       </ScrollView>
