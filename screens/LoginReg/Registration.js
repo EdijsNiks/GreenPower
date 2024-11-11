@@ -14,6 +14,7 @@ import {
 import React, { useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const Registration = () => {
   const [name, setName] = useState("");
@@ -22,40 +23,14 @@ const Registration = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [isPressed, setIsPressed] = useState(false);
+  const [admin, setAdmin] = useState(true);
+  const [checkedIn, setCheckedIn] = useState(false);
+  const [checkedInTime, setCheckedInTime] = useState(null);
   const navigation = useNavigation();
   const { width, height } = Dimensions.get("window");
 
   const togglePasswordVisibility = () => setPasswordVisible(!passwordVisible);
 
-  const userData = {
-    email: email,
-    password: password,
-  };
-
-  /*
-    const handleLogin = (email, password) => {
-      axios
-        .post(
-          `http://rhomeserver.ddns.net:8086/api/client/login?Email=${email}&password=${password}`
-        )
-        .then((response) => {
-          console.log(response.data);
-          navigation.replace("Main");
-          const stringifiedData = JSON.stringify(email);
-          AsyncStorage.setItem("myKey", stringifiedData)
-            .then(() => {
-              console.log("Data saved successfully");
-              console.log(stringifiedData);
-            })
-            .catch((error) => {
-              console.error("Error saving data:", error);
-            });
-        })
-        .catch((error) => {
-          console.log(error);
-        });
-    };
-*/
   const validateEmail = (email) => {
     // Ensure email has an "@" symbol and is at least 5 characters long
     const emailPattern = /.+@.+\..+/;
@@ -91,16 +66,31 @@ const Registration = () => {
     return true;
   };
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     if (validateFields()) {
-      Alert.alert("Success", "Registration completed!", [], {
-        cancelable: true,
-      });
+      const userProfile = {
+        name,
+        email,
+        password,
+        admin,
+        checkedIn,
+        checkedInTime,
+      };
 
-      // Show success popup for 2 seconds, then navigate to Login
-      setTimeout(() => {
-        navigation.replace("Login");
-      }, 2000);
+      try {
+        await AsyncStorage.setItem("profile", JSON.stringify(userProfile));
+        Alert.alert("Success", "Registration completed!", [], {
+          cancelable: true,
+        });
+
+        // Navigate to Login screen after 2 seconds
+        setTimeout(() => {
+          navigation.replace("Login");
+        }, 2000);
+      } catch (error) {
+        console.error("Error saving user profile:", error);
+        Alert.alert("Error", "Failed to save user profile. Please try again.");
+      }
     }
   };
 

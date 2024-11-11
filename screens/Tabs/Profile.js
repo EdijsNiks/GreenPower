@@ -1,34 +1,39 @@
 import { StyleSheet, Text, View, Image, SafeAreaView, Dimensions, Pressable } from "react-native";
 import React, { useLayoutEffect, useState, useEffect } from "react";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useIsFocused } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const { width } = Dimensions.get("window");
 
 const Profile = () => {
   const navigation = useNavigation();
-  const [currentUser, setCurrentUser] = useState("");
+  const isFocused = useIsFocused();
+  const [currentUser, setCurrentUser] = useState(null);
   const [isCheckedIn, setIsCheckedIn] = useState(true);
   const [isPressed, setIsPressed] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(true); // New state for admin check
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     /////////// Fetch User Data ///////////
-    AsyncStorage.getItem("myKey")
-      .then((stringifiedData) => {
-        if (stringifiedData !== null) {
-          const data = JSON.parse(stringifiedData);
-          console.log("User data retrieved from AsyncStorage:", data);
-          setCurrentUser(data);
-          
-          // Example admin check, you can replace with your own logic
-          setIsAdmin(data === "admin@example.com"); // Modify this according to your admin check logic
+    const fetchUserData = async () => {
+      try {
+        const userProfileString = await AsyncStorage.getItem('profile');
+        if (userProfileString) {
+          const userProfile = JSON.parse(userProfileString);
+          console.log("User data retrieved from AsyncStorage:", userProfile);
+          setCurrentUser(userProfile);
+          setIsAdmin(userProfile.admin === true); // Modify this according to your admin check logic
         }
-      })
-      .catch((error) => {
+      } catch (error) {
         console.error("Error retrieving data:", error);
-      });
-  }, []);
+      }
+    };
+
+    // Fetch user data whenever the screen is focused
+    if (isFocused) {
+      fetchUserData();
+    }
+  }, [isFocused]);
 
   useLayoutEffect(() => {
     /////////// Hide Header ///////////
@@ -39,18 +44,16 @@ const Profile = () => {
 
   const handleLogout = () => {
     /////////// Logout Functionality ///////////
-    AsyncStorage.clear()
-      .then(() => {
-        navigation.replace("Login");
-      })
-      .catch((error) => {
-        console.error("Error clearing AsyncStorage:", error);
-      });
+    // Reset the application state without clearing AsyncStorage
+    setCurrentUser(null);
+    setIsCheckedIn(true);
+    setIsAdmin(false);
+    navigation.replace("Login");
   };
 
   const handleAdminPage = () => {
     /////////// Navigate to Admin Page ///////////
-    navigation.navigate("AdminPage"); 
+    navigation.navigate("AdminPage");
   };
 
   return (
@@ -63,47 +66,43 @@ const Profile = () => {
 
       {/*///////// Profile Container //////////*/}
       <View style={styles.profileContainer}>
-        <Text style={styles.profileText}>Jeff Gusta</Text>
+        {currentUser ? (
+          <>
+            <Text style={styles.profileText}>{currentUser.name}</Text>
 
-        {/* Check-in Status */}
-        <View style={styles.checkInContainer}>
-          <Text style={styles.checkInLabel}>Checked In:</Text>
-          <Text style={[styles.checkInStatus, { color: isCheckedIn ? 'green' : 'red' }]}>
-            {isCheckedIn ? 'Yes' : 'No'}
-          </Text>
-        </View>
+            {/* Check-in Status */}
+            <View style={styles.checkInContainer}>
+              <Text style={styles.checkInLabel}>Checked In:</Text>
+              <Text style={[styles.checkInStatus, { color: currentUser.checkedIn ? 'green' : 'red' }]}>
+                {currentUser.checkedIn ? 'Yes' : 'No'}
+              </Text>
+            </View>
 
-        {/* Tasks Section */}
-        <View style={styles.tasksContainer}>
-          <Text style={styles.tasksTitle}>Tasks</Text>
-        </View>
+            {/* Logout Button */}
+            <Pressable
+              onPressIn={() => setIsPressed(true)}
+              onPressOut={() => setIsPressed(false)}
+              onPress={handleLogout}
+            >
+              <View style={[styles.logoutButton, { backgroundColor: isPressed ? '#A4D337' : '#7CB518' }]}>
+                <Text style={styles.logoutButtonText}>Logout</Text>
+              </View>
+            </Pressable>
 
-        {/* Logout Button */}
-        <Pressable
-          onPressIn={() => setIsPressed(true)}
-          onPressOut={() => setIsPressed(false)}
-          onPress={handleLogout}
-        >
-          <View style={[styles.logoutButton, { backgroundColor: isPressed ? '#A4D337' : '#7CB518' }]}>
-            <Text style={styles.logoutButtonText}>Logout</Text>
-          </View>
-        </Pressable>
-
-        {/* Admin Button */}
-        {isAdmin && (
-          <Pressable
-            onPress={handleAdminPage}
-            style={styles.adminButton}
-          >
-            <Text style={styles.adminButtonText}>Admin Page</Text>
-          </Pressable>
-          
+            {/* Admin Button */}
+            {isAdmin && (
+              <Pressable onPress={handleAdminPage} style={styles.adminButton}>
+                <Text style={styles.adminButtonText}>Admin Page</Text>
+              </Pressable>
+            )}
+          </>
+        ) : (
+          <Text style={styles.profileText}>Loading...</Text>
         )}
       </View>
     </SafeAreaView>
   );
 };
-
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,

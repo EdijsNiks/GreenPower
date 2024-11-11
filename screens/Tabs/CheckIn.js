@@ -1,95 +1,95 @@
-import {
-  SafeAreaView,
-  View,
-  Text,
-  Image,
-  StyleSheet,
-  Dimensions,
-  TouchableOpacity,
-  Alert,
-} from "react-native";
-import React, { useLayoutEffect, useState, useEffect } from "react";
-import { useNavigation } from "@react-navigation/native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { useLayoutEffect, useState, useEffect } from 'react';
+import { SafeAreaView, View, Text, Image, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import CustomAlert from '../../components/CheckInComp/CustomAlert';
 
-const { width } = Dimensions.get("window");
+const { width } = Dimensions.get('window');
 
 const CheckIn = () => {
   const navigation = useNavigation();
-  const [currentUser, setCurrentUser] = useState("Jeff");
-  const [checkedIn, setCheckedIn] = useState(false);
-  const [checkInTime, setCheckInTime] = useState(null);
-  const [checkOutTime, setCheckOutTime] = useState(null);
-  const [totalTime, setTotalTime] = useState(0); // Store total time spent checked in
-  const [alertVisible, setAlertVisible] = useState(false); 
+  const [profile, setProfile] = useState(null);
+  const [alertVisible, setAlertVisible] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
-  const [showConfirm, setShowConfirm] = useState(false); // To show confirmation alert
+  const [showConfirm, setShowConfirm] = useState(false);
 
-  // Load data from AsyncStorage on mount
+  // Load user profile data from AsyncStorage on mount
   useEffect(() => {
-    AsyncStorage.getItem("myKey")
-      .then((stringifiedData) => {
-        if (stringifiedData !== null) {
-          const data = JSON.parse(stringifiedData);
-          console.log("User data retrieved from AsyncStorage:", data);
-          setCurrentUser(data);
-        }
-      })
-      .catch((error) => {
-        console.error("Error retrieving data:", error);
-      });
-
-    // Load stored check-in/out times and total time from AsyncStorage
-    loadStoredData();
+    loadProfileData();
+    console.log(profile);
   }, []);
 
-  const loadStoredData = async () => {
+  const loadProfileData = async () => {
     try {
-      const checkInTimeStored = await AsyncStorage.getItem('checkInTime');
-      const totalTimeStored = await AsyncStorage.getItem('totalTime');
-      
-      if (checkInTimeStored) {
-        setCheckInTime(new Date(checkInTimeStored));
-        setCheckedIn(true);
+      const storedProfile = await AsyncStorage.getItem('profile');
+      if (storedProfile) {
+        setProfile(JSON.parse(storedProfile));
       }
-      
-      if (totalTimeStored) {
-        setTotalTime(parseFloat(totalTimeStored));
-      }
-      
     } catch (error) {
-      console.error('Error loading stored data:', error);
+      console.error('Error loading profile data:', error);
     }
   };
 
-  // Reset states and total time after 24 hours
-  const resetStates = async () => {
-    setCheckedIn(false);
-    setCheckInTime(null);
-    setCheckOutTime(null);
-    setTotalTime(0);
-    await AsyncStorage.removeItem('checkInTime');
-    await AsyncStorage.removeItem('totalTime');
+  // Save user profile data to AsyncStorage
+  const saveProfileData = async (updatedProfile) => {
+    try {
+      await AsyncStorage.setItem('profile', JSON.stringify(updatedProfile));
+      setProfile(updatedProfile);
+    } catch (error) {
+      console.error('Error saving profile data:', error);
+    }
   };
-
-  useEffect(() => {
-    // Automatically reset the state every 24 hours
-    const interval = setInterval(async () => {
-      const now = new Date();
-      if (checkInTime && now.getTime() - checkInTime.getTime() >= 24 * 60 * 60 * 1000) {
-        await resetStates();
-      }
-    }, 1000 * 60); // Check every minute
-
-    return () => clearInterval(interval);
-  }, [checkInTime]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
       headerShown: false,
     });
   }, [navigation]);
+
+  const handleCheckIn = async () => {
+    if (profile && profile.checkedIn) {
+      // Show confirmation before checking out
+      setAlertMessage("Do you really want to check out?");
+      setShowConfirm(true);
+      setAlertVisible(true);
+    } else {
+      // User checks in
+      const now = new Date();
+      const updatedProfile = {
+        ...profile,
+        checkedIn: true,
+        checkedInTime: now.toISOString(),
+      };
+      await saveProfileData(updatedProfile);
+      setAlertMessage("Check-In Successful");
+      setShowConfirm(false);
+      setAlertVisible(true);
+    }
+  };
+
+  const handleCheckOut = async () => {
+    if (profile) {
+      const now = new Date();
+      const timeSpent = calculateTotalTime(new Date(profile.checkedInTime), now);
+      const updatedProfile = {
+        ...profile,
+        checkedIn: false,
+        checkedInTime: null,
+        totalTime: profile.totalTime + timeSpent,
+      };
+      await saveProfileData(updatedProfile);
+
+      // Format start and end times for display
+      const checkInFormatted = formatDateTime(new Date(profile.checkedInTime));
+      const checkOutFormatted = formatDateTime(now);
+
+      setAlertMessage(
+        `You have checked out.\n\nStart: ${checkInFormatted}\nEnd: ${checkOutFormatted}\nTime spent: ${timeSpent.toFixed(2)} minutes.`
+      );
+      setShowConfirm(false);
+      setAlertVisible(true);
+    }
+  };
 
   const calculateTotalTime = (start, end) => {
     const timeSpent = (end - start) / 1000 / 60; // Time spent in minutes
@@ -107,75 +107,41 @@ const CheckIn = () => {
     return date.toLocaleDateString(undefined, options);
   };
 
-  const handleCheckIn = async () => {
-    if (checkedIn) {
-      // Show confirmation before checking out
-      setAlertMessage("Do you really want to check out?");
-      setShowConfirm(true); // Enable Yes/No buttons in the alert
-      setAlertVisible(true);
-    } else {
-      // User checks in
-      const now = new Date();
-      setCheckInTime(now);
-      await AsyncStorage.setItem('checkInTime', now.toString());
-      setAlertMessage("Check-In Successful");
-      setShowConfirm(false); // Disable Yes/No buttons, show OK
-      setAlertVisible(true);
-      setCheckedIn(true);
-    }
-  };
-
-  const handleCheckOut = async () => {
-    const now = new Date();
-    setCheckOutTime(now);
-
-    // Calculate total time spent checked in for this session
-    const timeSpent = calculateTotalTime(checkInTime, now);
-    const newTotalTime = totalTime + timeSpent;
-    setTotalTime(newTotalTime);
-
-    // Save total time to AsyncStorage
-    await AsyncStorage.setItem('totalTime', newTotalTime.toString());
-    
-    // Format start and end times for display
-    const checkInFormatted = formatDateTime(checkInTime);
-    const checkOutFormatted = formatDateTime(now);
-
-    // Reset check-in state
-    setCheckedIn(false);
-    setCheckInTime(null);
-    setCheckOutTime(null);
-    await AsyncStorage.removeItem('checkInTime');
-
-    setAlertMessage(
-      `You have checked out.\n\nStart: ${checkInFormatted}\nEnd: ${checkOutFormatted}\nTime spent: ${timeSpent.toFixed(2)} minutes.`
+  if (!profile) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.navbar}>
+          <Image source={require('../../assets/logo1.png')} style={styles.logo} />
+          <Text style={styles.screenName}>CHECKIN</Text>
+        </View>
+        <View style={styles.profileContainer}>
+          <Text style={styles.profileText}>Loading...</Text>
+        </View>
+      </SafeAreaView>
     );
-    setShowConfirm(false);
-    setAlertVisible(true);
-  };
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.navbar}>
-        <Image source={require("../../assets/logo1.png")} style={styles.logo} />
+        <Image source={require('../../assets/logo1.png')} style={styles.logo} />
         <Text style={styles.screenName}>CHECKIN</Text>
       </View>
 
       <View style={styles.profileContainer}>
-        <Text style={styles.profileText}>{currentUser}</Text>
+        <Text style={styles.profileText}>{profile.name}</Text>
         <Text style={styles.checkInText}>Check in to work</Text>
 
         <TouchableOpacity
-          style={checkedIn ? styles.checkedInButton : styles.checkInButton}
+          style={profile.checkedIn ? styles.checkedInButton : styles.checkInButton}
           onPress={handleCheckIn}
         >
           <Text style={styles.buttonText}>
-            {checkedIn ? "Press to check out" : "Press to check in"}
+            {profile.checkedIn ? 'Press to check out' : 'Press to check in'}
           </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Custom Alert Modal */}
       <CustomAlert
         visible={alertVisible}
         message={alertMessage}
@@ -186,7 +152,6 @@ const CheckIn = () => {
     </SafeAreaView>
   );
 };
-
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,

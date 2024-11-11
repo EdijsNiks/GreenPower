@@ -9,10 +9,12 @@ import {
   TouchableOpacity,
   Pressable,
   Dimensions,
+  Alert,
 } from "react-native";
 import React, { useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -23,38 +25,27 @@ const Login = () => {
 
   const togglePasswordVisibility = () => setPasswordVisible(!passwordVisible);
 
-  const userData = {
-    email: email,
-    password: password,
-  };
+  const handleLogin = async () => {
+    try {
+      // Retrieve the user profile from AsyncStorage
+      const userProfileString = await AsyncStorage.getItem("profile");
+      if (userProfileString) {
+        const userProfile = JSON.parse(userProfileString);
 
-  /*
-    const handleLogin = (email, password) => {
-      axios
-        .post(
-          `http://rhomeserver.ddns.net:8086/api/client/login?Email=${email}&password=${password}`
-        )
-        .then((response) => {
-          console.log(response.data);
+        // Verify the email and password
+        if (userProfile.email === email && userProfile.password === password) {
+          Alert.alert("Welcome!", "Login successful!");
           navigation.replace("Main");
-          const stringifiedData = JSON.stringify(email);
-          AsyncStorage.setItem("myKey", stringifiedData)
-            .then(() => {
-              console.log("Data saved successfully");
-              console.log(stringifiedData);
-            })
-            .catch((error) => {
-              console.error("Error saving data:", error);
-            });
-        })
-        .catch((error) => {
-          console.log(error);
-        });
-    };
-  
-*/
-  const handleLogin = () => {
-    navigation.replace("Main");
+        } else {
+          Alert.alert("Error", "Invalid email or password.");
+        }
+      } else {
+        Alert.alert("Error", "No user profile found.");
+      }
+    } catch (error) {
+      console.error("Error checking user profile:", error);
+      Alert.alert("Error", "Failed to check user profile. Please try again.");
+    }
   };
 
   const { width, height } = Dimensions.get("window");
@@ -106,7 +97,7 @@ const Login = () => {
         <Pressable
           onPressIn={() => setIsPressed(true)}
           onPressOut={() => setIsPressed(false)}
-          onPress={() => handleLogin(email, password)}
+          onPress={handleLogin}
         >
           <LinearGradient
             colors={isPressed ? ["#A4D337", "#A4D337"] : ["#A4D337", "#7CB518"]}
