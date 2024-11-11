@@ -85,15 +85,15 @@ const ReservedItemsModal = ({
 
   const onAdd = async (item) => {
     // Check if the item is already reserved for this project
-    const isAlreadyReserved = reservedItems.some(
-      (reservedItem) => reservedItem.id === item.id
+    const isAlreadyReserved = item.reserved.some(
+      (res) => res.projectId === taskId
     );
-  
+
     if (isAlreadyReserved) {
       alert("This item is already reserved for this project.");
       return;
     }
-  
+
     const updatedItem = {
       ...item,
       reserved: [...item.reserved, { projectId: taskId, count: 1 }],
@@ -112,19 +112,16 @@ const ReservedItemsModal = ({
       }
       return project;
     });
-  
+
     setReservedItems([...reservedItems, updatedItem]);
     setWarehouseItems(updatedWarehouseItems);
     setProjects(updatedProjects);
-  
+
     await updateStorage(updatedWarehouseItems, updatedProjects);
   };
 
   const onRemove = async (itemId) => {
-    const updatedReservedItems = reservedItems.filter((item) => item.id !== itemId);
-    setReservedItems(updatedReservedItems);
-
-    const updatedWarehouseItems = warehouseItems.map((item) => {
+    const updatedReservedItems = reservedItems.map((item) => {
       if (item.id === itemId) {
         return {
           ...item,
@@ -145,14 +142,24 @@ const ReservedItemsModal = ({
       return project;
     });
 
-    setWarehouseItems(updatedWarehouseItems);
+    setReservedItems(updatedReservedItems);
     setProjects(updatedProjects);
+
+    const updatedWarehouseItems = warehouseItems.map((item) => {
+      if (item.id === itemId) {
+        return {
+          ...item,
+          reserved: item.reserved.filter((res) => res.projectId !== taskId),
+        };
+      }
+      return item;
+    });
 
     await updateStorage(updatedWarehouseItems, updatedProjects);
   };
 
   const updateItemCount = async (itemId, increment) => {
-    const updatedWarehouseItems = warehouseItems.map((item) => {
+    const updatedReservedItems = reservedItems.map((item) => {
       if (item.id === itemId) {
         const updatedReserved = item.reserved.map((res) => {
           if (res.projectId === taskId) {
@@ -181,11 +188,10 @@ const ReservedItemsModal = ({
       return project;
     });
 
-    setWarehouseItems(updatedWarehouseItems);
+    setReservedItems(updatedReservedItems);
     setProjects(updatedProjects);
-    
-    // Update reservedItems state for UI
-    const updatedReservedItems = reservedItems.map((item) => {
+
+    const updatedWarehouseItems = warehouseItems.map((item) => {
       if (item.id === itemId) {
         const updatedReserved = item.reserved.map((res) => {
           if (res.projectId === taskId) {
@@ -198,7 +204,6 @@ const ReservedItemsModal = ({
       }
       return item;
     });
-    setReservedItems(updatedReservedItems);
 
     await updateStorage(updatedWarehouseItems, updatedProjects);
   };
@@ -212,22 +217,24 @@ const ReservedItemsModal = ({
     <View style={styles.itemContainer}>
       <TouchableOpacity
         style={styles.itemInfo}
-        onPress={() => navigation.navigate("WarehouseItemInfo", { 
-          itemData: item,
-        })}
+        onPress={() =>
+          navigation.navigate("WarehouseItemInfo", {
+            itemData: item,
+          })
+        }
       >
         <Text style={styles.itemText}>{item.name}</Text>
         <Text style={styles.countText}>Count: {getItemCount(item)}</Text>
       </TouchableOpacity>
       <View style={styles.countControls}>
-        <TouchableOpacity 
-          style={styles.countButtonMinus}  
+        <TouchableOpacity
+          style={styles.countButtonMinus}
           onPress={() => updateItemCount(item.id, -1)}
         >
           <Text style={styles.buttonText}>-</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.countButton} 
+        <TouchableOpacity
+          style={styles.countButton}
           onPress={() => updateItemCount(item.id, 1)}
         >
           <Text style={styles.buttonText}>+</Text>
@@ -244,6 +251,12 @@ const ReservedItemsModal = ({
       <Text style={styles.itemText}>{item.name}</Text>
       <Text style={styles.availableCount}>Available: {item.count}</Text>
     </TouchableOpacity>
+  );
+
+  // Sort reserved items by project ID
+  reservedItems.sort((a, b) =>
+    a.reserved.find((res) => res.projectId === taskId).count -
+    b.reserved.find((res) => res.projectId === taskId).count
   );
 
   return (

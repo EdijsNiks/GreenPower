@@ -9,7 +9,11 @@ import {
   TextInput,
   Modal,
 } from "react-native";
-import { useNavigation, useRoute, useFocusEffect } from "@react-navigation/native";
+import {
+  useNavigation,
+  useRoute,
+  useFocusEffect,
+} from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import styles from "../../styles/WarehouseItemInfoStyles.js";
@@ -41,41 +45,27 @@ const WarehouseItemInfo = () => {
 
           if (storedItems) {
             const allItems = JSON.parse(storedItems);
-            const currentItem = allItems.find((item) => item.id === itemData.id);
+            const currentItem = allItems.find(
+              (item) => item.id === itemData.id
+            );
             if (currentItem) {
               setItemDetails(currentItem);
-              setAvailableCount(currentItem.count);
+              setAvailableCount(
+                currentItem.count -
+                  getTotalReservedForItem(
+                    currentItem.id,
+                    JSON.parse(storedProjects)
+                  )
+              );
             }
           }
 
           if (storedProjects) {
             const projectsData = JSON.parse(storedProjects);
             setProjects(projectsData);
-
-            const reservations = projectsData.reduce((acc, project) => {
-              const reservation = project.reserved?.find(
-                (item) => item.itemId === itemData.id
-              );
-              if (reservation) {
-                acc.push({
-                  projectId: project.id,
-                  projectTitle: project.name,
-                  count: parseInt(reservation.count),
-                });
-              }
-              return acc;
-            }, []);
-
-            setProjectReservations(reservations);
-
-            const totalReserved = reservations.reduce(
-              (sum, res) => sum + res.count,
-              0
+            setProjectReservations(
+              getReservationsForItem(itemData.id, projectsData)
             );
-
-            if (itemDetails?.count) {
-              setAvailableCount(itemDetails.count - totalReserved);
-            }
           }
         } catch (error) {
           console.error("Error loading item data:", error);
@@ -100,14 +90,17 @@ const WarehouseItemInfo = () => {
                 ? route.params.updatedItem
                 : item
             );
-
+            console.log(updatedItems);
             await AsyncStorage.setItem("items", JSON.stringify(updatedItems));
             const updatedItem = updatedItems.find(
               (item) => item.id === itemData.id
             );
             if (updatedItem) {
               setItemDetails(updatedItem);
-              setAvailableCount(updatedItem.count);
+              setAvailableCount(
+                updatedItem.count -
+                  getTotalReservedForItem(updatedItem.id, projects)
+              );
             }
           }
         } catch (error) {
@@ -118,7 +111,7 @@ const WarehouseItemInfo = () => {
 
       updateItem();
     }
-  }, [route?.params?.updatedItem]);
+  }, [route?.params?.updatedItem, projects]);
 
   const handleReserveItem = async () => {
     if (!reservedCount || !selectedProject) {
@@ -159,6 +152,7 @@ const WarehouseItemInfo = () => {
               itemId: itemDetails.id,
               name: itemDetails.name,
               count: reserveAmount,
+              projectId: project.id,
             },
           ];
           return { ...project, reserved: newReserved };
@@ -166,32 +160,35 @@ const WarehouseItemInfo = () => {
         return project;
       });
 
-      // Calculate total reservations
-      const totalReserved = updatedProjects.reduce((sum, project) => {
-        const reservation = project.reserved?.find(
-          (item) => item.itemId === itemDetails.id
-        );
-        return sum + (reservation ? parseInt(reservation.count) : 0);
-      }, 0);
+      const totalReserved = getTotalReservedForItem(
+        itemDetails.id,
+        updatedProjects
+      );
+      const newAvailableCount = itemDetails.count - totalReserved;
 
-      // Update AsyncStorage
-      await Promise.all([
-        AsyncStorage.setItem("projects", JSON.stringify(updatedProjects)),
-        AsyncStorage.setItem(
-          `item_${itemDetails.id}`,
-          JSON.stringify({
-            ...itemDetails,
-            isReserved: totalReserved > 0,
-          })
-        ),
-      ]);
+      // Update item data in AsyncStorage
+      await AsyncStorage.setItem(
+        `item_${itemDetails.id}`,
+        JSON.stringify({
+          ...itemDetails,
+          isReserved: totalReserved > 0,
+          count: itemDetails.count,
+          reserved: updatedProjects
+            .flatMap((project) => project.reserved || [])
+            .filter((reservation) => reservation.itemId === itemDetails.id),
+        })
+      );
 
-      // Update state
+      await AsyncStorage.setItem("projects", JSON.stringify(updatedProjects));
+
       setProjects(updatedProjects);
       setReservedCount("");
       setSelectedProject(null);
       setShowReserveSection(false);
-      setAvailableCount(itemDetails.count - totalReserved);
+      setAvailableCount(newAvailableCount);
+      setProjectReservations(
+        getReservationsForItem(itemDetails.id, updatedProjects)
+      );
 
       Alert.alert("Success", "Item reserved successfully!");
     } catch (error) {
@@ -223,26 +220,37 @@ const WarehouseItemInfo = () => {
                 return project;
               });
 
-              const totalReserved = updatedProjects.reduce((sum, project) => {
-                const reservation = project.reserved?.find(
-                  (item) => item.itemId === itemDetails.id
-                );
-                return sum + (reservation ? parseInt(reservation.count) : 0);
-              }, 0);
+              const totalReserved = getTotalReservedForItem(
+                itemDetails.id,
+                updatedProjects
+              );
+              const newAvailableCount = itemDetails.count - totalReserved;
 
-              await Promise.all([
-                AsyncStorage.setItem("projects", JSON.stringify(updatedProjects)),
-                AsyncStorage.setItem(
-                  `item_${itemDetails.id}`,
-                  JSON.stringify({
-                    ...itemDetails,
-                    isReserved: totalReserved > 0,
-                  })
-                ),
-              ]);
+              // Update item data in AsyncStorage
+              await AsyncStorage.setItem(
+                `item_${itemDetails.id}`,
+                JSON.stringify({
+                  ...itemDetails,
+                  isReserved: totalReserved > 0,
+                  count: itemDetails.count,
+                  reserved: updatedProjects
+                    .flatMap((project) => project.reserved || [])
+                    .filter(
+                      (reservation) => reservation.itemId === itemDetails.id
+                    ),
+                })
+              );
+
+              await AsyncStorage.setItem(
+                "projects",
+                JSON.stringify(updatedProjects)
+              );
 
               setProjects(updatedProjects);
-              setAvailableCount(itemDetails.count - totalReserved);
+              setAvailableCount(newAvailableCount);
+              setProjectReservations(
+                getReservationsForItem(itemDetails.id, updatedProjects)
+              );
               Alert.alert("Success", "Reservation cleared successfully!");
             } catch (error) {
               console.error("Error clearing reservation:", error);
@@ -260,6 +268,31 @@ const WarehouseItemInfo = () => {
 
   const closeFullScreen = () => {
     setSelectedPhoto(null);
+  };
+
+  const getTotalReservedForItem = (itemId, projectsData) => {
+    return projectsData.reduce((sum, project) => {
+      const reservation = project.reserved?.find(
+        (item) => item.itemId === itemId
+      );
+      return sum + (reservation ? parseInt(reservation.count) : 0);
+    }, 0);
+  };
+
+  const getReservationsForItem = (itemId, projectsData) => {
+    return projectsData.reduce((acc, project) => {
+      const reservation = project.reserved?.find(
+        (item) => item.itemId === itemId
+      );
+      if (reservation) {
+        acc.push({
+          projectId: project.id,
+          projectTitle: project.name,
+          count: parseInt(reservation.count),
+        });
+      }
+      return acc;
+    }, []);
   };
 
   return (
@@ -284,7 +317,7 @@ const WarehouseItemInfo = () => {
           <Text style={styles.itemDetails}>
             Available Count: {availableCount || "N/A"}
           </Text>
-          
+
           {projectReservations.length > 0 && (
             <View style={styles.reservationsContainer}>
               <Text style={styles.reservationsTitle}>Reserved By:</Text>

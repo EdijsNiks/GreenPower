@@ -8,6 +8,8 @@ node_modules/
 dist/
 web-build/
 backend/
+/android
+/ios
 # Native
 *.orig.*
 *.jks

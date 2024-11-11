@@ -97,7 +97,8 @@ const Login = () => {
         <Pressable
           onPressIn={() => setIsPressed(true)}
           onPressOut={() => setIsPressed(false)}
-          onPress={handleLogin}
+          onPress={()=> navigation.replace("Main")}
+          //onPress={handleLogin}
         >
           <LinearGradient
             colors={isPressed ? ["#A4D337", "#A4D337"] : ["#A4D337", "#7CB518"]}

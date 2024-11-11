@@ -41,25 +41,28 @@ const Warehouse = ({ route }) => {
   const [savedData, setSavedData] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
 
-  // Load task list from AsyncStorage on component mount
-  useFocusEffect(
-    useCallback(() => {
-      const loadItems = async () => {
-        try {
-          const storedItems = await AsyncStorage.getItem("items");
-          if (storedItems) {
-            setTaskList(JSON.parse(storedItems));
-            console.log(storedItems);
-          }
-        } catch (error) {
-          console.error("Error loading items:", error);
+  // Load task list from AsyncStorage on component mount and when the screen is focused
+  useEffect(() => {
+    const loadItems = async () => {
+      try {
+        const storedItems = await AsyncStorage.getItem("items");
+        if (storedItems) {
+          setTaskList(JSON.parse(storedItems));
+          console.log(storedItems);
         }
-      };
+      } catch (error) {
+        console.error("Error loading items:", error);
+      }
+    };
 
-      loadItems();
-    }, [])
-  );
+    const unsubscribe = navigation.addListener("focus", loadItems);
 
+    // Load items when the component mounts
+    loadItems();
+
+    // Cleanup the focus listener when the component unmounts
+    return unsubscribe;
+  }, [navigation]);
   // Update taskList with new item from AddItemToWarehouse screen and save to AsyncStorage
   useEffect(() => {
     if (route?.params?.newItem) {
@@ -145,7 +148,7 @@ const Warehouse = ({ route }) => {
     let backgroundColor;
     if (item.count === 0) {
       backgroundColor = "red";
-    } else if (item.isReserved) {
+    } else if (item.reserved.length > 0) {
       backgroundColor = "green";
     } else {
       backgroundColor = "#D3D3D3";

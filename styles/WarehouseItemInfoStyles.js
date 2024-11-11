@@ -31,10 +31,10 @@ const styles = StyleSheet.create({
     marginLeft: width * 0.15,
   },
   itemInfoContainer: {
-    marginTop: 100,
+    marginTop: 110,
     paddingHorizontal: 20,
     backgroundColor: "#A4D337",
-    paddingVertical: 20,
+    paddingVertical: 30,
     borderRadius: 5,
   },
   itemName: {

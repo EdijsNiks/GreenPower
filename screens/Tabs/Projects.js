@@ -122,7 +122,7 @@ const Projects = () => {
 
       {/* Profile Container */}
       <View style={styles.profileContainer}>
-        <Text style={styles.profileText}>{currentUser}</Text>
+        <Text style={styles.profileText}></Text>
       </View>
 
       {/* Search, Filter, and Add Task */}
