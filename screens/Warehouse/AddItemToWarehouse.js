@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -15,9 +15,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from "expo-file-system";
 import PhotoPicker from "../../components/PhotoPicker";
-import 'react-native-get-random-values'; // Polyfill for random values
-import { v4 as uuidv4 } from 'uuid';
-
+import { v4 as uuidv4 } from "uuid";
+import { Picker } from "@react-native-picker/picker"; // Import picker for dropdown
 
 const { width } = Dimensions.get("window");
 
@@ -29,6 +28,40 @@ const AddItemToWarehouse = () => {
   const [reserved, setReserved] = useState([]);
   const [category, setCategory] = useState("");
   const [photos, setPhotos] = useState([]);
+  const [categories, setCategories] = useState([]); // State to store fetched categories
+
+  useEffect(() => {
+  //  saveDefaultCategories(); // Save default categories on mount
+    fetchCategories(); // Fetch categories from AsyncStorage on mount
+  }, []);
+
+  // Save default categories to AsyncStorage if they don't exist
+  /*const saveDefaultCategories = async () => {
+    const defaultCategories = ["SCREWS", "BOLTS", "METAL SHEETS", "ETC"];
+    try {
+      const storedCategories = await AsyncStorage.getItem("categories");
+      if (!storedCategories) {
+        await AsyncStorage.setItem(
+          "categories",
+          JSON.stringify(defaultCategories)
+        );
+      }
+    } catch (error) {
+      console.error("Error saving default categories:", error);
+    }
+  };
+*/
+  // Fetch categories from AsyncStorage
+  const fetchCategories = async () => {
+    try {
+      const storedCategories = await AsyncStorage.getItem("categories");
+      if (storedCategories) {
+        setCategories(JSON.parse(storedCategories));
+      }
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    }
+  };
 
   const savePhotoToFileSystem = async (uri) => {
     try {
@@ -39,7 +72,10 @@ const AddItemToWarehouse = () => {
       const fileName = uri.split("/").pop();
       const localUri = FileSystem.documentDirectory + fileName;
 
-      const { uri: localFileUri } = await FileSystem.downloadAsync(uri, localUri);
+      const { uri: localFileUri } = await FileSystem.downloadAsync(
+        uri,
+        localUri
+      );
       return localFileUri;
     } catch (error) {
       console.error("Error saving photo:", error);
@@ -48,7 +84,6 @@ const AddItemToWarehouse = () => {
   };
 
   const generateUniqueId = () => uuidv4();
-
 
   const handleSaveItem = async () => {
     if (!itemName || !description || !count || !category) {
@@ -90,7 +125,10 @@ const AddItemToWarehouse = () => {
             setReserved([]);
             setCategory("");
             setPhotos([]);
-            navigation.navigate("Main", { screen: "Warehouse", params: { newItem } });
+            navigation.navigate("Main", {
+              screen: "Warehouse",
+              params: { newItem },
+            });
           },
         },
       ]);
@@ -130,14 +168,24 @@ const AddItemToWarehouse = () => {
             onChangeText={setCount}
             keyboardType="numeric"
           />
-          <TextInput
-            style={styles.input}
-            placeholder="Category"
-            value={category}
-            onChangeText={setCategory}
-          />
+          <View
+            style={[
+              styles.dropdownContainer,
+              category && { borderColor: "green" }, // Apply green border if category is selected
+            ]}
+          >
+            <Picker
+              selectedValue={category}
+              onValueChange={(value) => setCategory(value)}
+              style={styles.dropdown}
+            >
+              <Picker.Item label="Select a Category - >" value="" />
+              {categories.map((cat) => (
+                <Picker.Item key={cat} label={cat} value={cat} />
+              ))}
+            </Picker>
+          </View>
         </View>
-
         <PhotoPicker
           photos={photos}
           onPhotosChange={setPhotos}
@@ -246,8 +294,12 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "bold",
   },
+  dropdownContainer: {
+    borderWidth: 2,
+    padding: 5,
+    marginBottom: 5,
+    borderRadius: 10, // Add rounded corners to the dropdown container
+  },
 });
 
 export default AddItemToWarehouse;
-
-

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -14,9 +14,11 @@ import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 const { width } = Dimensions.get("window");
-import * as FileSystem from "expo-file-system";
-import 'react-native-get-random-values'; // Polyfill for random values
-import { v4 as uuidv4 } from 'uuid';
+import "react-native-get-random-values"; // Polyfill for random values
+import { v4 as uuidv4 } from "uuid";
+import { Picker } from "@react-native-picker/picker"; // Import picker for dropdown
+import { LinearGradient } from "expo-linear-gradient";
+
 
 const AddItemToProject = () => {
   const navigation = useNavigation();
@@ -28,29 +30,27 @@ const AddItemToProject = () => {
   const [isFinished, setIsFinished] = useState(false);
   const [photos, setPhotos] = useState([]);
   const [reserved, setReserved] = useState([]);
+  const [categories, setCategories] = useState([]); // State to store fetched categories
 
-  // Function to save photo to local file system if needed
-  const savePhotoToFileSystem = async (uri) => {
-    try {
-      if (uri.startsWith("file://")) {
-        return uri;
-      }
 
-      const fileName = uri.split("/").pop();
-      const localUri = FileSystem.documentDirectory + fileName;
-
-      const { uri: localFileUri } = await FileSystem.downloadAsync(
-        uri,
-        localUri
-      );
-      return localFileUri;
-    } catch (error) {
-      console.error("Error saving photo:", error);
-      return uri;
-    }
-  };
   const generateUniqueId = () => uuidv4();
 
+  useEffect(() => {
+    //  saveDefaultCategories(); // Save default categories on mount
+      fetchCategories(); // Fetch categories from AsyncStorage on mount
+    }, []);
+
+    // Fetch categories from AsyncStorage
+    const fetchCategories = async () => {
+      try {
+        const storedCategories = await AsyncStorage.getItem("categoriesProjects");
+        if (storedCategories) {
+          setCategories(JSON.parse(storedCategories));
+        }
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+      }
+    };
 
   // Handle Save
   const handleSaveProject = async () => {
@@ -67,7 +67,6 @@ const AddItemToProject = () => {
           return { uri: localUri };
         })
       );
-
 
       const newProject = {
         id: generateUniqueId(),
@@ -108,14 +107,6 @@ const AddItemToProject = () => {
     }
   };
 
-  // Add photo logic (stubbed for now)
-  const handleAddPhoto = () => {
-    setPhotos([
-      ...photos,
-      { uri: `https://example.com/photo${photos.length + 1}.jpg` },
-    ]);
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.navbar}>
@@ -131,6 +122,7 @@ const AddItemToProject = () => {
             value={projectName}
             onChangeText={setProjectName}
           />
+
           <TextInput
             style={styles.textArea}
             placeholder="Description"
@@ -138,35 +130,33 @@ const AddItemToProject = () => {
             onChangeText={setDescription}
             multiline
             numberOfLines={4}
-          />
-          <TextInput
-            style={styles.textArea}
-            placeholder="Category"
-            value={categoryName}
-            onChangeText={setCategoryName}
-            multiline
-            numberOfLines={1}
-          />
+          />         
+           <View style={styles.lineSeparator}></View>
+          <View
+            style={[
+              styles.dropdownContainer,
+              categoryName && { borderColor: "green" }, // Apply green border if category is selected
+            ]}
+          >
+            <Picker
+              selectedValue={categoryName}
+              onValueChange={(value) => setCategoryName(value)}
+              style={styles.dropdown}
+            >
+              <Picker.Item label="Select a Category - >" value="" />
+              {categories.map((cat) => (
+                <Picker.Item key={cat} label={cat} value={cat} />
+              ))}
+            </Picker>
+          </View>
         </View>
 
-        <View style={styles.photosSection}>
-          <View style={styles.photoRow}>
-            <Text style={styles.photosTitle}>PHOTOS</Text>
-            <TouchableOpacity
-              style={styles.addPhotoButton}
-              onPress={handleAddPhoto}
-            >
-              <Text style={styles.buttonText}>Add Photo</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.photoGallery}>
-            {photos.map((photo, index) => (
-              <View key={index} style={styles.photo}>
-                <Text>{photo.uri}</Text>
-              </View>
-            ))}
-          </View>
+        <View style={styles.photoGallery}>
+          {photos.map((photo, index) => (
+            <View key={index} style={styles.photo}>
+              <Text>{photo.uri}</Text>
+            </View>
+          ))}
         </View>
 
         <View style={styles.buttonRow}>
@@ -219,23 +209,26 @@ const styles = StyleSheet.create({
   inputContainer: {
     marginTop: 150,
     paddingHorizontal: 20,
+    
   },
   input: {
     borderWidth: 1,
     borderColor: "#ccc",
-    borderRadius: 5,
+    borderRadius: 8,
     padding: 10,
     marginBottom: 20,
     fontSize: 16,
+    borderWidth: 2,
   },
   textArea: {
     borderWidth: 1,
     borderColor: "#ccc",
-    borderRadius: 5,
+    borderRadius: 8,
     padding: 10,
     height: 100,
     textAlignVertical: "top",
     fontSize: 16,
+    borderWidth: 2,
   },
   photosSection: {
     padding: 20,
@@ -292,6 +285,15 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "bold",
   },
-});
+  dropdownContainer: {
+    borderWidth: 2,
+    padding: 5,
+    marginBottom: 5,
+    borderRadius: 10, // Add rounded corners to the dropdown containers
+  },
+  lineSeparator: {
+    height: 10,
+  },
+  });
 
 export default AddItemToProject;

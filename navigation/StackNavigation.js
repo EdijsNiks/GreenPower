@@ -170,7 +170,7 @@ const StackNavigation = () => {
           options={{ headerShown: false }}
         />
         <Stack.Screen
-          name="TasksItemInfo"
+          name="ProjectsInfo"
           component={ProjectsInfo}
           options={{ headerShown: false }}
         />

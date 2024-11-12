@@ -1,10 +1,5 @@
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  useLayoutEffect,
-} from "react";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import React, { useState, useEffect } from "react";
+import { useNavigation } from "@react-navigation/native";
 import {
   Text,
   View,
@@ -18,17 +13,16 @@ import {
 } from "react-native";
 import { Camera } from "expo-camera";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import AsyncStorage from "@react-native-async-storage/async-storage"; // Import AsyncStorage
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import FilterModalWarehouse from "../../components/FilterModalWarehouse";
 import Pagination from "../../components/Pagination";
 import QRCodeScanner from "../../components/QRCodeScanner";
 import styles from "../../styles/WarehouseStyles.js";
 import WarehouseSpots from "../../components/WarehouseSpots.js";
-import { mockData } from "../../mockData.js";
 
 const Warehouse = ({ route }) => {
   const navigation = useNavigation();
-  const [currentUser, setCurrentUser] = useState(mockData.profile.username);
+  const [currentUser, setCurrentUser] = useState("");
   const [taskList, setTaskList] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredTaskList, setFilteredTaskList] = useState([]);
@@ -37,33 +31,38 @@ const Warehouse = ({ route }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [showScanner, setShowScanner] = useState(false);
   const [hasPermission, setHasPermission] = useState(null);
+  const [categories, setCategories] = useState([]); // Holds categories loaded from AsyncStorage
   const tasksPerPage = 10;
   const [savedData, setSavedData] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
 
-  // Load task list from AsyncStorage on component mount and when the screen is focused
+  // Load task list and categories from AsyncStorage on component mount
   useEffect(() => {
-    const loadItems = async () => {
+    const loadData = async () => {
       try {
+        // Load tasks
         const storedItems = await AsyncStorage.getItem("items");
         if (storedItems) {
           setTaskList(JSON.parse(storedItems));
-          console.log(storedItems);
+          setFilteredTaskList(JSON.parse(storedItems)); // Initialize filtered list with all items
+        }
+
+        // Load categories
+        const storedCategories = await AsyncStorage.getItem("categories");
+        if (storedCategories) {
+          setCategories(JSON.parse(storedCategories));
         }
       } catch (error) {
-        console.error("Error loading items:", error);
+        console.error("Error loading data:", error);
       }
     };
 
-    const unsubscribe = navigation.addListener("focus", loadItems);
-
-    // Load items when the component mounts
-    loadItems();
-
-    // Cleanup the focus listener when the component unmounts
+    const unsubscribe = navigation.addListener("focus", loadData);
+    loadData();
     return unsubscribe;
   }, [navigation]);
-  // Update taskList with new item from AddItemToWarehouse screen and save to AsyncStorage
+
+  // Update taskList with new or updated item and save to AsyncStorage
   useEffect(() => {
     if (route?.params?.newItem) {
       const updateItems = async () => {
@@ -71,11 +70,11 @@ const Warehouse = ({ route }) => {
         try {
           await AsyncStorage.setItem("items", JSON.stringify(updatedItems));
           setTaskList(updatedItems);
+          setFilteredTaskList(updatedItems); // Refresh filtered list
         } catch (error) {
           console.error("Error saving items:", error);
         }
       };
-
       updateItems();
     }
   }, [route?.params?.newItem]);
@@ -91,11 +90,11 @@ const Warehouse = ({ route }) => {
         try {
           await AsyncStorage.setItem("items", JSON.stringify(updatedItems));
           setTaskList(updatedItems);
+          setFilteredTaskList(updatedItems); // Refresh filtered list
         } catch (error) {
           console.error("Error updating items:", error);
         }
       };
-
       updateItem();
     }
   }, [route?.params?.updatedItem]);
@@ -106,7 +105,6 @@ const Warehouse = ({ route }) => {
       const { status } = await Camera.requestCameraPermissionsAsync();
       setHasPermission(status === "granted");
     };
-
     requestCameraPermission();
 
     if (route.params?.scannedData) {
@@ -117,49 +115,46 @@ const Warehouse = ({ route }) => {
     }
   }, [route.params?.scannedData]);
 
-  useFocusEffect(
-    useCallback(() => {
-      setCurrentPage(1);
-    }, [])
-  );
-
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerShown: false,
-    });
-  }, [navigation]);
-
   const handleQRCodeScanned = (data) => {
-    console.log("Scanned data:", data);
     setSavedData(data);
     setModalVisible(true);
     setShowScanner(false);
   };
-
   const handleSearch = (text) => {
     setSearchQuery(text);
-    const filteredData = mockData.warehouse.filter((task) =>
-      task.title ? task.title.toLowerCase().includes(text.toLowerCase()) : false
-    );
-    setFilteredTaskList(filteredData);
+  
+    if (text === "") {
+      // Reset to full task list if search is cleared
+      setFilteredTaskList(taskList);
+    } else {
+      // Filter task list based on search query
+      const filteredData = taskList.filter((task) =>
+        task.name ? task.name.toLowerCase().includes(text.toLowerCase()) : false
+      );
+      setFilteredTaskList(filteredData);
+    }
+  };
+
+  // Function to filter by selected categories
+  const handleCategoryFilter = (categories) => {
+    setSelectedCategories(categories);
+    if (categories.length > 0) {
+      const filteredData = taskList.filter((task) =>
+        categories.includes(task.category)
+      );
+      setFilteredTaskList(filteredData);
+    } else {
+      setFilteredTaskList(taskList); // Reset if no categories selected
+    }
+    setFilterModalVisible(false);
   };
 
   const renderTaskItem = ({ item }) => {
-    let backgroundColor;
-    if (item.count === 0) {
-      backgroundColor = "red";
-    } else if (item.reserved.length > 0) {
-      backgroundColor = "green";
-    } else {
-      backgroundColor = "#D3D3D3";
-    }
-
+    let backgroundColor = item.count === 0 ? "red" : "#D3D3D3";
     return (
       <TouchableOpacity
         onPress={() =>
-          navigation.navigate("WarehouseItemInfo", {
-            itemData: item,
-          })
+          navigation.navigate("WarehouseItemInfo", { itemData: item })
         }
       >
         <View style={[styles.taskItem, { backgroundColor }]}>
@@ -170,17 +165,10 @@ const Warehouse = ({ route }) => {
     );
   };
 
-  const totalPages = Math.ceil(taskList.length / tasksPerPage);
-  const currentPageData = taskList.slice(
+  const totalPages = Math.ceil(filteredTaskList.length / tasksPerPage);
+  const currentPageData = filteredTaskList.slice(
     (currentPage - 1) * tasksPerPage,
     currentPage * tasksPerPage
-  );
-
-  const data = (searchQuery ? filteredTaskList : currentPageData).map(
-    (item) => ({
-      ...item,
-      id: item.id || `temp-${Math.random()}`, // Fallback unique ID
-    })
   );
 
   return (
@@ -191,7 +179,7 @@ const Warehouse = ({ route }) => {
       </View>
 
       <View style={styles.profileContainer}>
-        <Text style={styles.profileText}></Text>
+        <Text style={styles.profileText}>{currentUser}</Text>
       </View>
 
       <View style={styles.actionRow}>
@@ -256,7 +244,7 @@ const Warehouse = ({ route }) => {
       </Modal>
 
       <FlatList
-        data={data}
+        data={searchQuery ? filteredTaskList : currentPageData}
         renderItem={renderTaskItem}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.taskList}
@@ -272,14 +260,12 @@ const Warehouse = ({ route }) => {
       <FilterModalWarehouse
         isVisible={isFilterModalVisible}
         onClose={() => setFilterModalVisible(false)}
+        categories={categories} // Display loaded categories
         selectedCategories={selectedCategories}
-        handleFilter={(categories) => {
-          setSelectedCategories(categories);
-          setFilterModalVisible(false);
-        }}
+        handleFilter={handleCategoryFilter}
         clearSelection={() => {
           setSelectedCategories([]);
-          setTaskList(mockData.warehouse);
+          setFilteredTaskList(taskList); // Reset filter
           setFilterModalVisible(false);
         }}
       />
@@ -296,3 +282,5 @@ const Warehouse = ({ route }) => {
 };
 
 export default Warehouse;
+
+

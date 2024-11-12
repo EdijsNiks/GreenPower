@@ -1,4 +1,3 @@
-// FilterModal.js
 import React from "react";
 import { View, Text, TouchableOpacity, Modal, StyleSheet } from "react-native";
 
@@ -8,6 +7,7 @@ const FilterModalWarehouse = ({
   selectedCategories,
   handleFilter,
   clearSelection,
+  categories = [], // Accept categories as a prop with a default empty array
 }) => {
   return (
     <Modal visible={isVisible} transparent={true} animationType="slide">
@@ -15,7 +15,8 @@ const FilterModalWarehouse = ({
         <View style={styles.modalContent}>
           <Text style={styles.modalTitle}>Select Category</Text>
 
-          {["UPS", "Generators", "MILITARY EQUIPMENT", "METALWORKING", "MOBILE BASE STATIONS", "TRAILERS"].map((category) => (
+          {/* Map through the categories prop instead of a hardcoded array */}
+          {categories.map((category) => (
             <View style={styles.buttonWrapper} key={category}>
               <TouchableOpacity
                 style={[
@@ -46,7 +47,6 @@ const FilterModalWarehouse = ({
     </Modal>
   );
 };
-
 const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,

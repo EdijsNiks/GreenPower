@@ -25,52 +25,10 @@ const ProjectsInfo = () => {
     return <Text>No project data available</Text>;
   }
   // Static data for reserved items based on the newItem model
-  const [reservedItems, setReservedItems] = useState([
-    {
-      id: "1",
-      name: "Reserved Item 1",
-      description: "Description for Reserved Item 1",
-      count: 10,
-      reserved: [],
-      category: "Category A",
-      photos: ["https://example.com/photo1.jpg"],
-      dateCreated: new Date().toLocaleString(),
-    },
-    {
-      id: "2",
-      name: "Reserved Item 2",
-      description: "Description for Reserved Item 2",
-      count: 5,
-      reserved: [],
-      category: "Category B",
-      photos: ["https://example.com/photo2.jpg"],
-      dateCreated: new Date().toLocaleString(),
-    },
-  ]);
+  const [reservedItems, setReservedItems] = useState([]);
 
   // Static data for unreserved warehouse items
-  const warehouseItems = [
-    {
-      id: "3",
-      name: "Warehouse Item 3",
-      description: "Description for Warehouse Item 3",
-      count: 20,
-      reserved: [],
-      category: "Category C",
-      photos: ["https://example.com/photo3.jpg"],
-      dateCreated: new Date().toLocaleString(),
-    },
-    {
-      id: "4",
-      name: "Warehouse Item 4",
-      description: "Description for Warehouse Item 4",
-      count: 15,
-      reserved: [],
-      category: "Category D",
-      photos: ["https://example.com/photo4.jpg"],
-      dateCreated: new Date().toLocaleString(),
-    },
-  ];
+  const warehouseItems = [];
 
   const onAdd = (item) => {
     const reservedItem = { ...item, projectId: project.id };

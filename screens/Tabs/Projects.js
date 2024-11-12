@@ -1,4 +1,9 @@
-import React, { useLayoutEffect, useState, useCallback } from "react";
+import React, {
+  useLayoutEffect,
+  useState,
+  useCallback,
+  useEffect,
+} from "react";
 import {
   StyleSheet,
   Text,
@@ -13,23 +18,39 @@ import {
 } from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import Fontisto from "@expo/vector-icons/Fontisto";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
+import FilterModalWarehouse from "../../components/FilterModalWarehouse";
 
 const { width } = Dimensions.get("window");
 
 const Projects = () => {
   const navigation = useNavigation();
-  const [currentUser, setCurrentUser] = useState("");
   const [taskList, setTaskList] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredTaskList, setFilteredTaskList] = useState([]);
   const [isFilterModalVisible, setFilterModalVisible] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [categories, setCategories] = useState([]); // Categories loaded from AsyncStorage
+  const [originalTaskList, setOriginalTaskList] = useState([]);
+
   const tasksPerPage = 10;
 
-  // Fetch projects data from AsyncStorage whenever screen is focused
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const storedCategories = await AsyncStorage.getItem("categoriesProjects");
+      if (storedCategories) {
+        setCategories(JSON.parse(storedCategories));
+      }
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       const loadProjects = async () => {
@@ -37,8 +58,12 @@ const Projects = () => {
           const storedProjects = await AsyncStorage.getItem("projects");
           if (storedProjects) {
             const parsedProjects = JSON.parse(storedProjects);
-            console.log("Projects data retrieved from AsyncStorage:", parsedProjects);
+            console.log(
+              "Projects data retrieved from AsyncStorage:",
+              parsedProjects
+            );
             setTaskList(parsedProjects);
+            setOriginalTaskList(parsedProjects); // Set the original task list
           }
         } catch (error) {
           console.error("Error loading projects data:", error);
@@ -49,14 +74,6 @@ const Projects = () => {
     }, [])
   );
 
-  const toggleTaskCompletion = (taskId) => {
-    setTaskList((prevTaskList) =>
-      prevTaskList.map((task) =>
-        task.id === taskId ? { ...task, completed: !task.completed } : task
-      )
-    );
-  };
-
   useLayoutEffect(() => {
     navigation.setOptions({
       headerShown: false,
@@ -65,37 +82,46 @@ const Projects = () => {
 
   const handleSearch = (text) => {
     setSearchQuery(text);
-    const filteredData = taskList.filter((task) =>
-      task.title.toLowerCase().includes(text.toLowerCase())
-    );
-    setFilteredTaskList(filteredData);
-  };
 
-  const handleFilter = (category) => {
-    if (selectedCategories.includes(category)) {
-      setSelectedCategories(
-        selectedCategories.filter((cat) => cat !== category)
+    if (text === "") {
+      setFilteredTaskList(taskList);
+    } else {
+      const filteredData = taskList.filter((task) =>
+        task.name ? task.name.toLowerCase().includes(text.toLowerCase()) : false
+      );
+      setFilteredTaskList(filteredData);
+    }
+  };
+  const handleCategoryFilter = (categories) => {
+    setSelectedCategories(categories);
+    let filteredData = [];
+    if (categories.length > 0) {
+      filteredData = originalTaskList.filter((task) =>
+        categories.includes(task.category)
       );
     } else {
-      setSelectedCategories([...selectedCategories, category]);
+      filteredData = originalTaskList; // Reset if no categories selected
     }
-
-    const filteredData = taskList.filter(
-      (task) =>
-        selectedCategories.includes(task.category) || task.category === category
-    );
     setTaskList(filteredData);
-  };
 
-  const clearSelection = () => {
-    setSelectedCategories([]);
-    setTaskList(taskList); // Reset task list to original data
-    setFilterModalVisible(false); // Optionally close the modal when clearing selection
+    if (searchQuery === "") {
+      setFilteredTaskList(filteredData);
+    } else {
+      const searchFilteredData = filteredData.filter((task) =>
+        task.name
+          ? task.name.toLowerCase().includes(searchQuery.toLowerCase())
+          : false
+      );
+      setFilteredTaskList(searchFilteredData);
+    }
+    setFilterModalVisible(false);
   };
 
   const renderTaskItem = ({ item }) => (
     <TouchableOpacity
-      onPress={() => navigation.navigate("TasksItemInfo", { taskId: item.id, project: item,})}
+      onPress={() =>
+        navigation.navigate("ProjectsInfo", { taskId: item.id, project: item })
+      }
     >
       <View style={styles.taskItem}>
         <View style={styles.taskLeft}>
@@ -107,7 +133,7 @@ const Projects = () => {
   );
 
   const totalPages = Math.ceil(taskList.length / tasksPerPage);
-  const currentPageData = taskList.slice(
+  const currentPageData = (searchQuery ? filteredTaskList : taskList).slice(
     (currentPage - 1) * tasksPerPage,
     currentPage * tasksPerPage
   );
@@ -125,7 +151,7 @@ const Projects = () => {
         <Text style={styles.profileText}></Text>
       </View>
 
-      {/* Search, Filter, and Add Task */}
+      {/* Search, Filter, and Add Project */}
       <View style={styles.actionRow}>
         <TouchableOpacity
           style={styles.filterButton}
@@ -149,7 +175,7 @@ const Projects = () => {
 
       {/* Task List */}
       <FlatList
-        data={searchQuery ? filteredTaskList : currentPageData}
+        data={currentPageData}
         renderItem={renderTaskItem}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.taskList}
@@ -173,56 +199,20 @@ const Projects = () => {
           <Text style={styles.pageButton}>Next</Text>
         </TouchableOpacity>
       </View>
-
       {/* Filter Modal */}
-      <Modal
-        visible={isFilterModalVisible}
-        transparent={true}
-        animationType="slide"
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Category</Text>
-            <View style={styles.buttonWrapper}>
-              <TouchableOpacity
-                style={[
-                  styles.button,
-                  selectedCategories.includes("Work") && styles.selectedButton,
-                ]}
-                onPress={() => handleFilter("Work")}
-              >
-                <Text style={styles.buttonText}>Work</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.buttonWrapper}>
-              <TouchableOpacity
-                style={[
-                  styles.button,
-                  selectedCategories.includes("Personal") &&
-                    styles.selectedButton,
-                ]}
-                onPress={() => handleFilter("Personal")}
-              >
-                <Text style={styles.buttonText}>Personal</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.buttonRow}>
-              <TouchableOpacity
-                style={styles.clearButton}
-                onPress={clearSelection}
-              >
-                <Text style={styles.clearButtonText}>Clear Selection</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={() => setFilterModalVisible(false)}
-              >
-                <Text style={styles.closeButtonText}>Close</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <FilterModalWarehouse
+        isVisible={isFilterModalVisible}
+        onClose={() => setFilterModalVisible(false)}
+        categories={categories} // Display loaded categories
+        selectedCategories={selectedCategories}
+        handleFilter={handleCategoryFilter}
+        clearSelection={() => {
+          setSelectedCategories([]);
+          setTaskList(originalTaskList); // Use the original task list
+          setFilteredTaskList(originalTaskList); // Reset the filtered task list
+          setFilterModalVisible(false);
+        }}
+      />
     </SafeAreaView>
   );
 };
