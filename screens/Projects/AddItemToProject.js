@@ -36,7 +36,7 @@ const AddItemToProject = () => {
   const generateUniqueId = () => uuidv4();
 
   useEffect(() => {
-    //  saveDefaultCategories(); // Save default categories on mount
+   //saveDefaultCategories(); // Save default categories on mount
       fetchCategories(); // Fetch categories from AsyncStorage on mount
     }, []);
 
@@ -51,7 +51,21 @@ const AddItemToProject = () => {
         console.error("Error fetching categories:", error);
       }
     };
-
+ /*   const saveDefaultCategories = async () => {
+      const defaultCategories = ["UPS", "Diesel", "METAL", "Masts", "ETC"];
+      try {
+        const storedCategories = await AsyncStorage.getItem("categoriesProjects");
+        if (!storedCategories) {
+          await AsyncStorage.setItem(
+            "categoriesProjects",
+            JSON.stringify(defaultCategories)
+          );
+        }
+      } catch (error) {
+        console.error("Error saving default categories:", error);
+      }
+    };
+*/
   // Handle Save
   const handleSaveProject = async () => {
     if (!projectName || !description) {

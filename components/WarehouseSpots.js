@@ -9,118 +9,134 @@ import {
   ActivityIndicator,
   TextInput,
   Alert,
+  Button,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const WarehouseSpots = ({ isVisible, spotId, onClose, navigation }) => {
+const WarehouseSpots = ({ isVisible, spotId, onClose, onSave, navigation }) => {
   const [spotData, setSpotData] = useState(null);
-  const [reservedItemIds, setReservedItemIds] = useState([]);
-  const [reservedItems, setReservedItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showItemSelector, setShowItemSelector] = useState(false);
-  const [availableItems, setAvailableItems] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filteredItems, setFilteredItems] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [showItemSelector, setShowItemSelector] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [warehouseItems, setWarehouseItems] = useState([]);
+  const [spotItems, setSpotItems] = useState([]);
+  const [filteredItems, setFilteredItems] = useState([]);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [itemCountUpdates, setItemCountUpdates] = useState({});
+  const [localInputs, setLocalInputs] = useState({});
 
   useEffect(() => {
-    loadSpotData();
-  }, [spotId]);
-
-  useEffect(() => {
-    if (searchQuery) {
-      const filtered = availableItems.filter((item) =>
-        item.name.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setFilteredItems(filtered);
-    } else {
-      setFilteredItems(availableItems);
+    if (isVisible && spotId) {
+      loadSpotData();
     }
-  }, [searchQuery, availableItems]);
+  }, [isVisible, spotId]);
 
-  // Load spot data and then load the actual items
+  useEffect(() => {
+    const filtered = warehouseItems.filter((item) =>
+      item.name.toLowerCase().includes((searchQuery || "").toLowerCase())
+    );
+    setFilteredItems(filtered);
+  }, [searchQuery, warehouseItems]);
+
   const loadSpotData = async () => {
     try {
       setLoading(true);
-      const spotsData = await AsyncStorage.getItem("spots");
-      if (spotsData) {
-        const spots = JSON.parse(spotsData);
-        const currentSpot = spots.find((spot) => spot.spotId === spotId);
-        if (currentSpot) {
-          setSpotData(currentSpot);
-          setReservedItemIds(currentSpot.reservedItems || []);
-          await loadReservedItems(currentSpot.reservedItems || []);
-        }
-      }
+      const [spotsData, itemsData] = await Promise.all([
+        AsyncStorage.getItem("spots"),
+        AsyncStorage.getItem("items"),
+      ]);
+
+      const spots = spotsData ? JSON.parse(spotsData) : [];
+      const items = itemsData ? JSON.parse(itemsData) : [];
+
+      const currentSpot = spots.find((spot) => spot.spotId === spotId) || {
+        spotId,
+        items: [],
+      };
+
+      setSpotData(currentSpot);
+
+      // Process spot items
+      const spotItemsArray = Array.isArray(currentSpot.items)
+        ? currentSpot.items
+        : [];
+      const fullSpotItems = spotItemsArray
+        .map((spotItem) => {
+          if (!spotItem?.itemId) return null;
+          const item = items.find((i) => i.id === spotItem.itemId);
+          return item
+            ? {
+                ...item,
+                count: spotItem.count || 0,
+              }
+            : null;
+        })
+        .filter(Boolean);
+
+      setSpotItems(fullSpotItems);
+
+      // Set available warehouse items
+      const spotItemIds = new Set(spotItemsArray.map((item) => item.itemId));
+      const availableItems = items.filter((item) => !spotItemIds.has(item.id));
+
+      setWarehouseItems(availableItems);
+      setFilteredItems(availableItems);
+      setHasChanges(false);
     } catch (error) {
-      console.error("Error loading spot data:", error);
+      console.error("Error loading data:", error);
       Alert.alert("Error", "Failed to load spot data");
     } finally {
       setLoading(false);
     }
   };
 
-  // Load the full item data for each reserved item ID
-  const loadReservedItems = async (itemIds) => {
+  const handleAddItem = async (selectedItem) => {
     try {
-      const storedItems = await AsyncStorage.getItem("items");
-      if (storedItems) {
-        const allItems = JSON.parse(storedItems);
-        const items = itemIds
-          .map((id) => allItems.find((item) => item.id === id))
-          .filter(Boolean); // Remove any undefined items
-        setReservedItems(items);
+      if (!selectedItem?.id) {
+        throw new Error("Invalid item selected");
       }
-    } catch (error) {
-      console.error("Error loading reserved items:", error);
-      Alert.alert("Error", "Failed to load reserved items");
-    }
-  };
 
-  const loadAvailableItems = async () => {
-    try {
-      const storedItems = await AsyncStorage.getItem("items");
-      if (storedItems) {
-        const parsedItems = JSON.parse(storedItems);
-        // Filter out items that are already reserved
-        const availableItems = parsedItems.filter(
-          (item) => !reservedItemIds.includes(item.id)
-        );
-        setAvailableItems(availableItems);
-        setFilteredItems(availableItems);
-      }
-    } catch (error) {
-      console.error("Error loading available items:", error);
-      Alert.alert("Error", "Failed to load available items");
-    }
-  };
-
-  const handleAddItem = () => {
-    setShowItemSelector(true);
-    loadAvailableItems();
-  };
-
-  const handleSelectItem = async (selectedItem) => {
-    try {
       const spotsData = await AsyncStorage.getItem("spots");
       let spots = spotsData ? JSON.parse(spotsData) : [];
 
-      // Save only the item ID to the spot
-      spots = spots.map((spot) => {
-        if (spot.spotId === spotId) {
-          return {
-            ...spot,
-            reservedItems: [...(spot.reservedItems || []), selectedItem.id],
-          };
-        }
-        return spot;
-      });
+      // Find the spot index
+      const spotIndex = spots.findIndex((spot) => spot.spotId === spotId);
+
+      if (spotIndex === -1) {
+        // Create new spot if it doesn't exist
+        spots.push({
+          spotId,
+          items: [
+            {
+              itemId: selectedItem.id,
+              count: selectedItem.count,
+            },
+          ],
+        });
+      } else {
+        // Update existing spot
+        spots[spotIndex] = {
+          ...spots[spotIndex],
+          items: [
+            ...(Array.isArray(spots[spotIndex].items)
+              ? spots[spotIndex].items
+              : []),
+            { itemId: selectedItem.id, count: selectedItem.count },
+          ],
+        };
+      }
 
       await AsyncStorage.setItem("spots", JSON.stringify(spots));
-      setReservedItemIds((prev) => [...prev, selectedItem.id]);
-      setReservedItems((prev) => [...prev, selectedItem]);
+
+      // Update local state
+      setSpotItems((prev) => [...prev, { ...selectedItem, count: selectedItem.count }]);
+      setWarehouseItems((prev) =>
+        prev.filter((item) => item.id !== selectedItem.id)
+      );
       setShowItemSelector(false);
       setSearchQuery("");
+      setHasChanges(true);
     } catch (error) {
       console.error("Error adding item:", error);
       Alert.alert("Error", "Failed to add item");
@@ -128,34 +144,12 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, navigation }) => {
   };
 
   const handleRemoveItem = async (itemId) => {
+    if (!itemId) return;
+
     try {
-      const spotsData = await AsyncStorage.getItem("spots");
-      let spots = JSON.parse(spotsData);
+      const itemToRemove = spotItems.find((item) => item.id === itemId);
+      if (!itemToRemove) return;
 
-      spots = spots.map((spot) => {
-        if (spot.spotId === spotId) {
-          return {
-            ...spot,
-            reservedItems: (spot.reservedItems || []).filter(
-              (id) => id !== itemId
-            ),
-          };
-        }
-        return spot;
-      });
-
-      await AsyncStorage.setItem("spots", JSON.stringify(spots));
-      setReservedItemIds((prev) => prev.filter((id) => id !== itemId));
-      setReservedItems((prev) => prev.filter((item) => item.id !== itemId));
-    } catch (error) {
-      console.error("Error removing item:", error);
-      Alert.alert("Error", "Failed to remove item");
-    }
-  };
-
-  const handleClose = async () => {
-    try {
-      setSaving(true);
       const spotsData = await AsyncStorage.getItem("spots");
       let spots = spotsData ? JSON.parse(spotsData) : [];
 
@@ -163,39 +157,98 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, navigation }) => {
         if (spot.spotId === spotId) {
           return {
             ...spot,
-            reservedItems: reservedItemIds, // Save only the item IDs
+            items: (spot.items || []).filter((item) => item.itemId !== itemId),
           };
         }
         return spot;
       });
 
       await AsyncStorage.setItem("spots", JSON.stringify(spots));
-      setSaving(false);
-      onClose();
+
+      setSpotItems((prev) => prev.filter((item) => item.id !== itemId));
+      setWarehouseItems((prev) => [...prev, itemToRemove]);
+      setHasChanges(true);
+    } catch (error) {
+      console.error("Error removing item:", error);
+      Alert.alert("Error", "Failed to remove item");
+    }
+  };
+
+  const saveInput = (itemId, additionalCount) => {
+    try {
+      const parsedAdditionalCount = parseInt(additionalCount, 10);
+      if (isNaN(parsedAdditionalCount) || parsedAdditionalCount < 0) {
+        Alert.alert("Error", "Count must be a valid positive number");
+        return;
+      }
+
+      const itemToUpdate = spotItems.find((item) => item.id === itemId);
+      if (!itemToUpdate) return;
+
+      const newCount = (itemToUpdate.count || 0) + parsedAdditionalCount;
+
+      // Update the item count in the itemCountUpdates object
+      setItemCountUpdates((prev) => ({
+        ...prev,
+        [itemId]: newCount,
+      }));
+
+      Alert.alert("Success", `Count updated to ${newCount}`);
+      setHasChanges(true);
+    } catch (error) {
+      console.error("Error saving count:", error);
+      Alert.alert("Error", "Failed to save item count");
+    }
+  };
+
+  const handleSaveAndClose = async () => {
+    try {
+      setSaving(true);
+
+      // Get current items data
+      const itemsData = await AsyncStorage.getItem("items");
+      let allItems = itemsData ? JSON.parse(itemsData) : [];
+
+      // Update the items with new counts
+      const updatedAllItems = allItems.map(item => {
+        const spotItem = spotItems.find(si => si.id === item.id);
+        if (spotItem) {
+          return {
+            ...item,
+            count: itemCountUpdates[item.id] || spotItem.count || 0
+          };
+        }
+        return item;
+      });
+
+      // Save updated items to AsyncStorage
+      await AsyncStorage.setItem("items", JSON.stringify(updatedAllItems));
+
+      // Update the spotItems with the latest counts
+      const updatedSpotItems = spotItems.map((item) => ({
+        id: item.id,
+        count: itemCountUpdates[item.id] || item.count || 0,
+        name: item.name,
+      }));
+
+      // Call the parent's onSave callback with the updated items
+      await onSave(updatedSpotItems);
+
+      // Pass the updated items back to the Warehouse component
+      onClose(updatedAllItems);
     } catch (error) {
       console.error("Error saving spot data:", error);
-      Alert.alert(
-        "Error",
-        "Failed to save changes. Do you want to try again?",
-        [
-          {
-            text: "Try Again",
-            onPress: handleClose,
-          },
-          {
-            text: "Close Without Saving",
-            onPress: onClose,
-            style: "cancel",
-          },
-        ]
-      );
+      Alert.alert("Error", "Failed to save spot data");
+    } finally {
       setSaving(false);
     }
   };
 
-  const navigateToItem = (itemId) => {
-    navigation.navigate("WarehouseItemInfo", { itemId });
-    onClose(); // Close the modal first
+  const handleTextChange = (itemId, text) => {
+    setLocalInputs((prev) => ({
+      ...prev,
+      [itemId]: text,
+    }));
   };
 
   const ItemSelector = () => (
@@ -216,14 +269,15 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, navigation }) => {
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.selectableItem}
-              onPress={() => handleSelectItem(item)}
+              onPress={() => handleAddItem(item)}
             >
               <Text style={styles.itemText}>{item.name}</Text>
               <Text style={styles.itemDescription}>{item.description}</Text>
+              <Text style={styles.count}>Count: {item.count}</Text>
             </TouchableOpacity>
           )}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No items found</Text>
+            <Text style={styles.emptyText}>No items available</Text>
           }
         />
 
@@ -238,6 +292,39 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, navigation }) => {
         </TouchableOpacity>
       </View>
     </Modal>
+  );
+
+  const renderSpotItem = ({ item }) => (
+    <View style={styles.itemContainer}>
+      <TouchableOpacity
+        style={styles.itemInfo}
+      >
+        <Text style={styles.itemText}>{item.name}</Text>
+        <Text style={styles.count}>Count: {item.count}</Text>
+      </TouchableOpacity>
+
+      <View style={styles.countControls}>
+        <TextInput
+          style={styles.countInput}
+          keyboardType="numeric"
+          value={localInputs[item.id] || ""}
+          onChangeText={(text) => handleTextChange(item.id, text)}
+          placeholder="0"
+        />
+        <Button
+          style={styles.saveButtonCount}
+          title="Save"
+          onPress={() => saveInput(item.id, localInputs[item.id])}
+        />
+      </View>
+
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => handleRemoveItem(item.id)}
+      >
+        <Text style={styles.buttonText}>Remove</Text>
+      </TouchableOpacity>
+    </View>
   );
 
   if (loading || saving) {
@@ -263,42 +350,31 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, navigation }) => {
           {spotData?.description || "No description available"}
         </Text>
 
-        <Text style={styles.sectionTitle}>Reserved Items</Text>
+        <Text style={styles.sectionTitle}>Items in Spot</Text>
 
         <FlatList
-          data={reservedItems}
+          data={spotItems}
           keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.itemContainer}
-              onPress={() => navigateToItem(item.id)}
-            >
-              <View style={styles.itemInfo}>
-                <Text style={styles.itemText}>{item.name}</Text>
-                <Text style={styles.itemDescription}>{item.description}</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.button}
-                onPress={(e) => {
-                  e.stopPropagation(); // Prevent triggering the parent onPress
-                  handleRemoveItem(item.id);
-                }}
-              >
-                <Text style={styles.buttonText}>Remove</Text>
-              </TouchableOpacity>
-            </TouchableOpacity>
-          )}
+          renderItem={renderSpotItem}
           ListEmptyComponent={
             <Text style={styles.emptyText}>No items in this spot</Text>
           }
         />
 
-        <TouchableOpacity style={styles.addButton} onPress={handleAddItem}>
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => setShowItemSelector(true)}
+        >
           <Text style={styles.buttonText}>Add Item</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-          <Text style={styles.buttonText}>Close</Text>
+        <TouchableOpacity
+          style={[styles.closeButton, hasChanges && styles.saveButton]}
+          onPress={handleSaveAndClose}
+        >
+          <Text style={styles.buttonText}>
+            {hasChanges ? "Save & Close" : "Close"}
+          </Text>
         </TouchableOpacity>
 
         <ItemSelector />
@@ -312,46 +388,39 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "white",
     padding: 20,
-    justifyContent: "center",
   },
   selectorContainer: {
     flex: 1,
     backgroundColor: "white",
     padding: 20,
-    marginTop: 50,
   },
   modalTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "bold",
     marginBottom: 10,
   },
   modalSubtitle: {
-    fontSize: 18,
-    marginVertical: 10,
+    fontSize: 16,
+    marginBottom: 20,
+    color: "#666",
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    marginTop: 15,
+    marginTop: 10,
+    marginBottom: 10,
   },
   searchInput: {
     borderWidth: 1,
     borderColor: "#ddd",
     borderRadius: 5,
     padding: 10,
-    marginBottom: 15,
-    fontSize: 16,
+    marginBottom: 10,
   },
   itemContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    alignItems: "center",
     padding: 10,
-    marginVertical: 5,
-    backgroundColor: "#f2f2f2",
-    borderRadius: 5,
-  },
-  selectableItem: {
-    padding: 15,
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
   },
@@ -362,43 +431,89 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "500",
   },
-  itemDescription: {
+  count: {
     fontSize: 14,
     color: "#666",
-    marginTop: 4,
   },
-  button: {
-    backgroundColor: "red",
+  countControls: {
+    flexDirection: "row",
+    marginRight: 10,
+  },
+  countButton: {
+    backgroundColor: "#4CAF50",
+    padding: 8,
+    borderRadius: 5,
+    marginLeft: 5,
+  },
+  countButtonMinus: {
+    backgroundColor: "#f44336",
     padding: 8,
     borderRadius: 5,
   },
-  addButton: {
-    backgroundColor: "green",
-    padding: 10,
-    borderRadius: 5,
-    marginTop: 15,
-    alignItems: "center",
+  disabledButton: {
+    opacity: 0.5,
   },
-  closeButton: {
-    backgroundColor: "#bbb",
-    padding: 10,
+  button: {
+    backgroundColor: "#ff6b6b",
+    padding: 8,
     borderRadius: 5,
-    marginTop: 10,
-    alignItems: "center",
   },
   buttonText: {
     color: "white",
     fontWeight: "bold",
   },
+  addButton: {
+    backgroundColor: "#4CAF50",
+    padding: 15,
+    borderRadius: 5,
+    alignItems: "center",
+    marginVertical: 10,
+  },
+  closeButton: {
+    backgroundColor: "#666",
+    padding: 15,
+    borderRadius: 5,
+    alignItems: "center",
+    marginTop: 10,
+  },
+  saveButton: {
+    backgroundColor: "#4CAF50",
+  },
+  selectableItem: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  itemDescription: {
+    fontSize: 14,
+    color: "#666",
+    marginTop: 5,
+  },
   emptyText: {
     textAlign: "center",
-    marginTop: 20,
     color: "#666",
+    marginTop: 20,
   },
   loadingText: {
     marginTop: 10,
+    fontSize: 16,
     textAlign: "center",
-    color: "#666",
+  },
+  countControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginRight: 10,
+  },
+  countInput: {
+    backgroundColor: "#f1f1f1",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 4,
+    width: 80,
+    textAlign: "center",
+  },
+  saveButtonCount: {
+    backgroundColor: "#4CAF50",
   },
 });
 

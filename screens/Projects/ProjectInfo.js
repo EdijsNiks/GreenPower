@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,9 @@ import {
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ReservedItemsModal from "../../components/ReservedItems";
+import PhotoPicker from "../../components/PhotoPicker";
+import * as FileSystem from "expo-file-system";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const { width } = Dimensions.get("window");
 
@@ -20,10 +23,61 @@ const ProjectsInfo = () => {
   const route = useRoute();
   const { project, taskId } = route.params; // Get project data from route params
   const [modalVisible, setModalVisible] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [photos, setPhotos] = useState([]);
+  
+  // Save photo to local filesystem
+  const savePhotoToFileSystem = async (uri) => {
+    try {
+      if (uri.startsWith("file://")) {
+        return uri;
+      }
 
+      const fileName = uri.split("/").pop();
+      const localUri = FileSystem.documentDirectory + fileName;
+
+      const { uri: localFileUri } = await FileSystem.downloadAsync(uri, localUri);
+      return localFileUri;
+    } catch (error) {
+      console.error("Error saving photo:", error);
+      return uri;
+    }
+  };
+
+  const saveProjectToAsyncStorage = async (updatedProject) => {
+    try {
+      await AsyncStorage.setItem(`project_${updatedProject.id}`, JSON.stringify(updatedProject));
+    } catch (error) {
+      console.error("Error updating AsyncStorage:", error);
+    }
+  };
+
+  const handleSavePhoto = async () => {
+    if (selectedPhoto) {
+      // Save selected photo to the project object
+      const updatedPhotos = [...project.photos, selectedPhoto];
+      const updatedProject = { ...project, photos: updatedPhotos };
+      
+      // Update AsyncStorage with the new project object
+      await saveProjectToAsyncStorage(updatedProject);
+      
+      // Update the project object state (for re-rendering)
+      project.photos = updatedPhotos;
+      console.log(project.photos);
+      
+      // Close the photo picker modal
+      setModalVisible(false);
+      
+      // Clear the selected photo
+      setSelectedPhoto(null);
+    }
+  };
+
+  // Render project details if project exists
   if (!project) {
     return <Text>No project data available</Text>;
   }
+
   // Static data for reserved items based on the newItem model
   const [reservedItems, setReservedItems] = useState([]);
 
@@ -91,17 +145,24 @@ const ProjectsInfo = () => {
 
         {/* Photos Section */}
         <View style={styles.photosSection}>
-          <View style={styles.photoRow}>
-            <Text style={styles.photosTitle}>PHOTOS</Text>
-            <TouchableOpacity style={styles.addPhotoButton}>
-              <Text style={styles.buttonText}>Add Photo</Text>
-            </TouchableOpacity>
-          </View>
+          <PhotoPicker
+            photos={photos}
+            onPhotosChange={setPhotos}
+            containerStyle={styles.photosSection}
+          />
           <View style={styles.photoGallery}>
             {project.photos.map((photo, index) => (
               <Image key={index} source={{ uri: photo }} style={styles.photo} />
             ))}
           </View>
+          {photos.length > 0 && (
+            <TouchableOpacity
+              style={styles.saveButton}
+              onPress={handleSavePhoto}
+            >
+              <Text style={styles.buttonText}>Save Photo</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Modal for Reserved Items */}
@@ -119,6 +180,7 @@ const ProjectsInfo = () => {
     </SafeAreaView>
   );
 };
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -295,6 +357,20 @@ const styles = StyleSheet.create({
     backgroundColor: "#A4D337",
     paddingVertical: 20,
     borderRadius: 5,
+  },
+  photosSection: {
+    padding: 20,
+  },
+  saveButton: {
+    backgroundColor: "#A4D337",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+    marginTop: 20,
+  },
+  buttonText: {
+    color: "white",
+    fontWeight: "bold",
   },
 });
 

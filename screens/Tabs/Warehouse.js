@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback  } from "react";
 import { useNavigation } from "@react-navigation/native";
 import {
   Text,
@@ -10,6 +10,7 @@ import {
   Image,
   Modal,
   Button,
+  Alert,
 } from "react-native";
 import { Camera } from "expo-camera";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
@@ -46,6 +47,8 @@ const Warehouse = ({ route }) => {
           setTaskList(JSON.parse(storedItems));
           setFilteredTaskList(JSON.parse(storedItems)); // Initialize filtered list with all items
         }
+        console.log("Task list loaded from AsyncStorage:");
+        console.log(storedItems);
 
         // Load categories
         const storedCategories = await AsyncStorage.getItem("categories");
@@ -62,22 +65,65 @@ const Warehouse = ({ route }) => {
     return unsubscribe;
   }, [navigation]);
 
+  const handleItemUpdate = useCallback(async (updatedItems) => {
+    try {
+      // Get current spots data
+      const spotsData = await AsyncStorage.getItem('spots');
+      let spots = spotsData ? JSON.parse(spotsData) : [];
+
+      // Update the specific spot with new items
+      spots = spots.map(spot => {
+        if (spot.spotId === savedData) {
+          return {
+            ...spot,
+            items: updatedItems.map(item => ({
+              itemId: item.id,
+              count: item.count || 0
+            }))
+          };
+        }
+        return spot;
+      });
+
+      // Save updated spots back to storage
+      await AsyncStorage.setItem('spots', JSON.stringify(spots));
+      
+      // Optional: Update any local state if needed
+      //Alert.alert('Success', 'Spot updated successfully');
+    } catch (error) {
+      console.error('Error updating spot:', error);
+      Alert.alert('Error', 'Failed to update spot');
+    }
+  }, [savedData]);
+  const handleModalClose = (updatedItems) => {
+    if (updatedItems) {
+      // Update local state
+      setTaskList(updatedItems);
+      setFilteredTaskList(updatedItems);
+    }
+    setModalVisible(false);
+  };
+
   // Update taskList with new or updated item and save to AsyncStorage
   useEffect(() => {
-    if (route?.params?.newItem) {
-      const updateItems = async () => {
-        const updatedItems = [...taskList, route.params.newItem];
+    if (route?.params?.updatedItem) {
+      const updateItem = async () => {
+        const updatedItems = taskList.map((item) =>
+          item.id === route.params.updatedItem.id
+            ? route.params.updatedItem
+            : item
+        );
         try {
           await AsyncStorage.setItem("items", JSON.stringify(updatedItems));
           setTaskList(updatedItems);
-          setFilteredTaskList(updatedItems); // Refresh filtered list
+          setFilteredTaskList(updatedItems);
         } catch (error) {
-          console.error("Error saving items:", error);
+          console.error("Error updating items:", error);
         }
       };
-      updateItems();
+      updateItem();
     }
-  }, [route?.params?.newItem]);
+  }, [route?.params?.updatedItem]);
 
   useEffect(() => {
     if (route?.params?.updatedItem) {
@@ -122,7 +168,7 @@ const Warehouse = ({ route }) => {
   };
   const handleSearch = (text) => {
     setSearchQuery(text);
-  
+
     if (text === "") {
       // Reset to full task list if search is cleared
       setFilteredTaskList(taskList);
@@ -150,7 +196,14 @@ const Warehouse = ({ route }) => {
   };
 
   const renderTaskItem = ({ item }) => {
-    let backgroundColor = item.count === 0 ? "red" : "#D3D3D3";
+    let backgroundColor;
+    if (item.count === 0) {
+      backgroundColor = "red"; // Red if count is zero
+    } else if (item.reserved.length > 0 && item.count > 0) {
+      backgroundColor = "green"; // Green if item is reserved and has stock
+    } else {
+      backgroundColor = "#D3D3D3"; // Grey if it has stock but is not reserved
+    }
     return (
       <TouchableOpacity
         onPress={() =>
@@ -272,15 +325,11 @@ const Warehouse = ({ route }) => {
       <WarehouseSpots
         isVisible={modalVisible}
         spotId={savedData}
-        onClose={() => {
-          setModalVisible(false);
-          setSavedData(null);
-        }}
+        onClose={handleModalClose}
+        onSave={handleItemUpdate}
       />
     </SafeAreaView>
   );
 };
 
 export default Warehouse;
-
-

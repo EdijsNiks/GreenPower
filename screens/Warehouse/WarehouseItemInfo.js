@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -9,11 +9,7 @@ import {
   TextInput,
   Modal,
 } from "react-native";
-import {
-  useNavigation,
-  useRoute,
-  useFocusEffect,
-} from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import styles from "../../styles/WarehouseItemInfoStyles.js";
@@ -23,95 +19,73 @@ const WarehouseItemInfo = () => {
   const route = useRoute();
   const { itemData } = route.params;
 
-  // State management
+  // Local state management
   const [itemDetails, setItemDetails] = useState(itemData);
   const [showReserveSection, setShowReserveSection] = useState(false);
   const [reservedCount, setReservedCount] = useState("");
   const [selectedProject, setSelectedProject] = useState(null);
-  const [availableCount, setAvailableCount] = useState(itemData.count || 0);
-  const [projectReservations, setProjectReservations] = useState([]);
-  const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [projects, setProjects] = useState([]);
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [reservedProjectIds, setReservedProjectIds] = useState([]);
+  const [reservationCount, setReservationCount] = useState(0); // New state variable
 
-  // Load data when screen is focused
-  useFocusEffect(
-    useCallback(() => {
-      const loadItemData = async () => {
-        try {
-          const [storedItems, storedProjects] = await Promise.all([
-            AsyncStorage.getItem("items"),
-            AsyncStorage.getItem("projects"),
-          ]);
+  const getProjectReservations = () => {
+    return projects.reduce((acc, project) => {
+      const reservation = project.reserved?.find(
+        (item) => item.itemId === itemDetails.id
+      );
+      if (reservation) {
+        acc.push({
+          projectId: project.id,
+          projectTitle: project.name,
+          count: parseInt(reservation.count),
+        });
+      }
+      return acc;
+    }, []);
+  };
 
-          if (storedItems) {
-            const allItems = JSON.parse(storedItems);
-            const currentItem = allItems.find(
-              (item) => item.id === itemData.id
-            );
-            if (currentItem) {
-              setItemDetails(currentItem);
-              setAvailableCount(
-                currentItem.count -
-                  getTotalReservedForItem(
-                    currentItem.id,
-                    JSON.parse(storedProjects)
-                  )
-              );
-            }
+  React.useEffect(() => {
+    loadProjects();
+  }, []);
+
+  const loadProjects = async () => {
+    try {
+      const storedProjects = await AsyncStorage.getItem("projects");
+      if (storedProjects) {
+        const parsedProjects = JSON.parse(storedProjects);
+        setProjects(parsedProjects);
+
+        const initialReservedIds = parsedProjects.reduce((acc, project) => {
+          const hasReservation = project.reserved?.some(
+            (item) => item.itemId === itemDetails.id
+          );
+          if (hasReservation) {
+            acc.push(project.id);
           }
-
-          if (storedProjects) {
-            const projectsData = JSON.parse(storedProjects);
-            setProjects(projectsData);
-            setProjectReservations(
-              getReservationsForItem(itemData.id, projectsData)
-            );
-          }
-        } catch (error) {
-          console.error("Error loading item data:", error);
-          Alert.alert("Error", "Failed to load item data");
-        }
-      };
-
-      loadItemData();
-    }, [itemData.id])
-  );
-
-  // Handle updates from route params
-  useEffect(() => {
-    if (route?.params?.updatedItem) {
-      const updateItem = async () => {
-        try {
-          const storedItems = await AsyncStorage.getItem("items");
-          if (storedItems) {
-            const items = JSON.parse(storedItems);
-            const updatedItems = items.map((item) =>
-              item.id === route.params.updatedItem.id
-                ? route.params.updatedItem
-                : item
-            );
-            console.log(updatedItems);
-            await AsyncStorage.setItem("items", JSON.stringify(updatedItems));
-            const updatedItem = updatedItems.find(
-              (item) => item.id === itemData.id
-            );
-            if (updatedItem) {
-              setItemDetails(updatedItem);
-              setAvailableCount(
-                updatedItem.count -
-                  getTotalReservedForItem(updatedItem.id, projects)
-              );
-            }
-          }
-        } catch (error) {
-          console.error("Error updating item:", error);
-          Alert.alert("Error", "Failed to update item");
-        }
-      };
-
-      updateItem();
+          return acc;
+        }, []);
+        setReservedProjectIds(initialReservedIds);
+      }
+    } catch (error) {
+      console.error("Error loading projects:", error);
+      Alert.alert("Error", "Failed to load projects");
     }
-  }, [route?.params?.updatedItem, projects]);
+  };
+
+  const getTotalReservedForItem = (itemId, projectsData) => {
+    return projectsData.reduce((sum, project) => {
+      const reservation = project.reserved?.find(
+        (item) => item.itemId === itemId
+      );
+      return sum + (reservation ? parseInt(reservation.count) : 0);
+    }, 0);
+  };
+
+  const getAvailableCount = () => {
+    const totalReserved = getTotalReservedForItem(itemDetails.id, projects);
+    return itemDetails.count - totalReserved;
+  };
 
   const handleReserveItem = async () => {
     if (!reservedCount || !selectedProject) {
@@ -125,7 +99,15 @@ const WarehouseItemInfo = () => {
       return;
     }
 
-    if (reserveAmount > availableCount) {
+    const projectReservation = projects
+      .find((project) => project.id === selectedProject.id)
+      ?.reserved?.find((item) => item.itemId === itemDetails.id);
+
+    const existingReservedCount = projectReservation
+      ? parseInt(projectReservation.count)
+      : 0;
+
+    if (reserveAmount >= itemDetails.count) {
       Alert.alert("Error", "Cannot reserve more items than available.");
       return;
     }
@@ -136,59 +118,48 @@ const WarehouseItemInfo = () => {
           const existingReservation = project.reserved?.find(
             (item) => item.itemId === itemDetails.id
           );
-
+          let newReserved;
           if (existingReservation) {
-            const newReserved = project.reserved.map((item) =>
+            newReserved = project.reserved.map((item) =>
               item.itemId === itemDetails.id
                 ? { ...item, count: parseInt(item.count) + reserveAmount }
                 : item
             );
-            return { ...project, reserved: newReserved };
+          } else {
+            newReserved = [
+              ...(project.reserved || []),
+              {
+                itemId: itemDetails.id,
+                name: itemDetails.name,
+                count: reserveAmount,
+                projectId: project.id,
+              },
+            ];
           }
-
-          const newReserved = [
-            ...(project.reserved || []),
-            {
-              itemId: itemDetails.id,
-              name: itemDetails.name,
-              count: reserveAmount,
-              projectId: project.id,
-            },
-          ];
           return { ...project, reserved: newReserved };
         }
         return project;
       });
 
-      const totalReserved = getTotalReservedForItem(
-        itemDetails.id,
-        updatedProjects
-      );
-      const newAvailableCount = itemDetails.count - totalReserved;
-
-      // Update item data in AsyncStorage
-      await AsyncStorage.setItem(
-        `item_${itemDetails.id}`,
-        JSON.stringify({
-          ...itemDetails,
-          isReserved: totalReserved > 0,
-          count: itemDetails.count,
-          reserved: updatedProjects
-            .flatMap((project) => project.reserved || [])
-            .filter((reservation) => reservation.itemId === itemDetails.id),
-        })
-      );
-
       await AsyncStorage.setItem("projects", JSON.stringify(updatedProjects));
-
       setProjects(updatedProjects);
+
+      // Update reservedProjectIds to include selectedProject.id as an array
+      const updatedReservedIds = [
+        ...new Set([...reservedProjectIds, selectedProject.id]),
+      ];
+      setReservedProjectIds(updatedReservedIds);
+
+      const updatedItem = {
+        ...itemDetails,
+        count: itemDetails.count - reserveAmount,
+        reserved: updatedReservedIds, // Update reserved as an array of project IDs
+      };
+      setItemDetails(updatedItem);
+
       setReservedCount("");
       setSelectedProject(null);
       setShowReserveSection(false);
-      setAvailableCount(newAvailableCount);
-      setProjectReservations(
-        getReservationsForItem(itemDetails.id, updatedProjects)
-      );
 
       Alert.alert("Success", "Item reserved successfully!");
     } catch (error) {
@@ -198,68 +169,118 @@ const WarehouseItemInfo = () => {
   };
 
   const handleClearProjectReservation = async (projectId) => {
-    Alert.alert(
-      "Clear Reservation",
-      "Are you sure you want to clear this project's reservation?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Clear",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const updatedProjects = projects.map((project) => {
-                if (project.id === projectId) {
-                  return {
-                    ...project,
-                    reserved: (project.reserved || []).filter(
-                      (item) => item.itemId !== itemDetails.id
-                    ),
-                  };
-                }
-                return project;
-              });
+    Alert.alert("Clear Reservation", "What do you want to do?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Subtract reserved amount",
+        style: "default",
+        onPress: async () => {
+          try {
+            const projectToUpdate = projects.find(
+              (project) => project.id === projectId
+            );
+            const reservation = projectToUpdate.reserved?.find(
+              (item) => item.itemId === itemDetails.id
+            );
+            const reservedCount = reservation ? parseInt(reservation.count) : 0;
 
-              const totalReserved = getTotalReservedForItem(
-                itemDetails.id,
-                updatedProjects
-              );
-              const newAvailableCount = itemDetails.count - totalReserved;
+            const updatedProjects = projects.map((project) => {
+              if (project.id === projectId) {
+                const updatedReserved = project.reserved.filter(
+                  (item) => item.itemId !== itemDetails.id
+                );
+                return { ...project, reserved: updatedReserved };
+              }
+              return project;
+            });
 
-              // Update item data in AsyncStorage
-              await AsyncStorage.setItem(
-                `item_${itemDetails.id}`,
-                JSON.stringify({
-                  ...itemDetails,
-                  isReserved: totalReserved > 0,
-                  count: itemDetails.count,
-                  reserved: updatedProjects
-                    .flatMap((project) => project.reserved || [])
-                    .filter(
-                      (reservation) => reservation.itemId === itemDetails.id
-                    ),
-                })
-              );
+            await AsyncStorage.setItem(
+              "projects",
+              JSON.stringify(updatedProjects)
+            );
+            setProjects(updatedProjects);
 
-              await AsyncStorage.setItem(
-                "projects",
-                JSON.stringify(updatedProjects)
-              );
+            // Update reservedProjectIds by removing the cleared project ID
+            const updatedReservedIds = reservedProjectIds.filter(
+              (id) => id !== projectId
+            );
+            setReservedProjectIds(updatedReservedIds);
 
-              setProjects(updatedProjects);
-              setAvailableCount(newAvailableCount);
-              setProjectReservations(
-                getReservationsForItem(itemDetails.id, updatedProjects)
-              );
-              Alert.alert("Success", "Reservation cleared successfully!");
-            } catch (error) {
-              console.error("Error clearing reservation:", error);
-              Alert.alert("Error", "Failed to clear reservation");
-            }
-          },
+            const updatedItem = {
+              ...itemDetails,
+              count: itemDetails.count,
+              reserved: updatedReservedIds, // Ensure reserved is updated with the filtered array
+            };
+            setItemDetails(updatedItem);
+
+            Alert.alert("Success", "Reservation cleared successfully!");
+          } catch (error) {
+            console.error("Error clearing reservation:", error);
+            Alert.alert("Error", "Failed to clear reservation");
+          }
         },
-      ]
-    );
+      },
+      {
+        text: "Add reserved amount back",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const projectToUpdate = projects.find(
+              (project) => project.id === projectId
+            );
+            const reservation = projectToUpdate.reserved?.find(
+              (item) => item.itemId === itemDetails.id
+            );
+            const reservedCount = reservation ? parseInt(reservation.count) : 0;
+
+            const updatedProjects = projects.map((project) => {
+              if (project.id === projectId) {
+                const updatedReserved = project.reserved.filter(
+                  (item) => item.itemId !== itemDetails.id
+                );
+                return { ...project, reserved: updatedReserved };
+              }
+              return project;
+            });
+
+            await AsyncStorage.setItem(
+              "projects",
+              JSON.stringify(updatedProjects)
+            );
+            setProjects(updatedProjects);
+
+            const updatedReservedIds = reservedProjectIds.filter(
+              (id) => id !== projectId
+            );
+            setReservedProjectIds(updatedReservedIds);
+
+            const updatedItem = {
+              ...itemDetails,
+              count: itemDetails.count + reservedCount,
+              reserved: updatedReservedIds, // Update reserved as an array of project IDs
+            };
+            setItemDetails(updatedItem);
+
+            Alert.alert(
+              "Success",
+              "Reservation cleared and item count restored!"
+            );
+          } catch (error) {
+            console.error("Error clearing reservation:", error);
+            Alert.alert("Error", "Failed to clear reservation");
+          }
+        },
+      },
+    ]);
+  };
+  const handleGoBack = () => {
+    // Pass updated item and reservedProjectIds back to Warehouse screen
+    navigation.navigate("Main", {
+      screen: "Warehouse",
+      params: {
+        updatedItem: itemDetails,
+      },
+    });
   };
 
   const handleImagePress = (photo) => {
@@ -268,31 +289,6 @@ const WarehouseItemInfo = () => {
 
   const closeFullScreen = () => {
     setSelectedPhoto(null);
-  };
-
-  const getTotalReservedForItem = (itemId, projectsData) => {
-    return projectsData.reduce((sum, project) => {
-      const reservation = project.reserved?.find(
-        (item) => item.itemId === itemId
-      );
-      return sum + (reservation ? parseInt(reservation.count) : 0);
-    }, 0);
-  };
-
-  const getReservationsForItem = (itemId, projectsData) => {
-    return projectsData.reduce((acc, project) => {
-      const reservation = project.reserved?.find(
-        (item) => item.itemId === itemId
-      );
-      if (reservation) {
-        acc.push({
-          projectId: project.id,
-          projectTitle: project.name,
-          count: parseInt(reservation.count),
-        });
-      }
-      return acc;
-    }, []);
   };
 
   return (
@@ -312,16 +308,18 @@ const WarehouseItemInfo = () => {
             Category: {itemDetails?.category || "N/A"}
           </Text>
           <Text style={styles.itemDetails}>
-            Total Count: {itemDetails?.count || "N/A"}
+            Total Count:{" "}
+            {itemDetails?.count +
+              getTotalReservedForItem(itemDetails.id, projects)  || "N/A"}
           </Text>
           <Text style={styles.itemDetails}>
-            Available Count: {availableCount || "N/A"}
+            Available Count: {itemDetails?.count - reservationCount || "0"}
           </Text>
 
-          {projectReservations.length > 0 && (
+          {getProjectReservations().length > 0 && (
             <View style={styles.reservationsContainer}>
               <Text style={styles.reservationsTitle}>Reserved By:</Text>
-              {projectReservations.map((reservation) => (
+              {getProjectReservations().map((reservation) => (
                 <View
                   key={reservation.projectId}
                   style={styles.reservationItem}
@@ -331,9 +329,10 @@ const WarehouseItemInfo = () => {
                   </Text>
                   <TouchableOpacity
                     style={styles.clearReservationButton}
-                    onPress={() =>
-                      handleClearProjectReservation(reservation.projectId)
-                    }
+                    onPress={() => {
+                      setReservationCount(reservation.count);
+                      handleClearProjectReservation(reservation.projectId);
+                    }}
                   >
                     <Text style={styles.clearReservationText}>Clear</Text>
                   </TouchableOpacity>
@@ -404,10 +403,7 @@ const WarehouseItemInfo = () => {
 
         {/* Action Buttons */}
         <View style={styles.buttonRow}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.navigate("Main", { screen: "Warehouse" })}
-          >
+          <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
             <Text style={styles.buttonText}>Go Back</Text>
           </TouchableOpacity>
           <TouchableOpacity

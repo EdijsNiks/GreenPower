@@ -31,12 +31,12 @@ const AddItemToWarehouse = () => {
   const [categories, setCategories] = useState([]); // State to store fetched categories
 
   useEffect(() => {
-  //  saveDefaultCategories(); // Save default categories on mount
+ //saveDefaultCategories(); // Save default categories on mount
     fetchCategories(); // Fetch categories from AsyncStorage on mount
   }, []);
 
   // Save default categories to AsyncStorage if they don't exist
-  /*const saveDefaultCategories = async () => {
+/*  const saveDefaultCategories = async () => {
     const defaultCategories = ["SCREWS", "BOLTS", "METAL SHEETS", "ETC"];
     try {
       const storedCategories = await AsyncStorage.getItem("categories");
@@ -51,6 +51,7 @@ const AddItemToWarehouse = () => {
     }
   };
 */
+
   // Fetch categories from AsyncStorage
   const fetchCategories = async () => {
     try {

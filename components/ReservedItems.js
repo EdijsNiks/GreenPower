@@ -28,6 +28,7 @@ const ReservedItemsModal = ({
       loadReservedItems();
       loadProjects();
     }
+    
   }, [visible]);
 
   const loadProjects = async () => {
@@ -53,20 +54,42 @@ const ReservedItemsModal = ({
     }
   };
 
-  const loadReservedItems = async () => {
-    try {
-      const storedItems = await AsyncStorage.getItem("items");
-      if (storedItems) {
-        const parsedItems = JSON.parse(storedItems);
-        const projectReservedItems = parsedItems.filter((item) =>
-          item.reserved.some((res) => res.projectId === taskId)
-        );
+const loadReservedItems = async () => {
+  try {
+    const storedProjects = await AsyncStorage.getItem("projects");
+    const storedItems = await AsyncStorage.getItem("items");
+
+    if (storedProjects && storedItems) {
+      const parsedProjects = JSON.parse(storedProjects);
+      const parsedItems = JSON.parse(storedItems);
+
+      // Find the current project by taskId
+      const currentProject = parsedProjects.find((project) => project.id === taskId);
+
+      if (currentProject && Array.isArray(currentProject.reserved) && currentProject.reserved.length > 0) {
+        // Map each reserved item in the project to its corresponding item in warehouseItems
+        const projectReservedItems = currentProject.reserved.map((reservedItem) => {
+          // Find the matching item in the warehouseItems array
+          const matchingWarehouseItem = parsedItems.find((item) => item.id === reservedItem.itemId);
+          if (matchingWarehouseItem) {
+            // Include the reserved count from the project
+            return {
+              ...matchingWarehouseItem,
+              reserved: [{ projectId: taskId, count: reservedItem.count }],
+            };
+          }
+          return null; // Filter out items not found in warehouseItems
+        }).filter((item) => item !== null); // Remove any null values
+
         setReservedItems(projectReservedItems);
+      } else {
+        setReservedItems([]); // No reserved items if project has an empty reserved array
       }
-    } catch (error) {
-      console.error("Error loading reserved items:", error);
     }
-  };
+  } catch (error) {
+    console.error("Error loading reserved items:", error);
+  }
+};
 
   const updateStorage = async (updatedItems, updatedProjects) => {
     try {
@@ -96,6 +119,7 @@ const ReservedItemsModal = ({
 
     const updatedItem = {
       ...item,
+      count: item.count - 1,
       reserved: [...item.reserved, { projectId: taskId, count: 1 }],
     };
     const updatedWarehouseItems = warehouseItems.map((warehouseItem) =>
@@ -125,6 +149,7 @@ const ReservedItemsModal = ({
       if (item.id === itemId) {
         return {
           ...item,
+          count: item.count - 1,
           reserved: item.reserved.filter((res) => res.projectId !== taskId),
         };
       }
@@ -149,6 +174,7 @@ const ReservedItemsModal = ({
       if (item.id === itemId) {
         return {
           ...item,
+          count: item.count - 1,
           reserved: item.reserved.filter((res) => res.projectId !== taskId),
         };
       }
@@ -233,7 +259,7 @@ const ReservedItemsModal = ({
         >
           <Text style={styles.buttonText}>-</Text>
         </TouchableOpacity>
-        <TouchableOpacity
+       <TouchableOpacity
           style={styles.countButton}
           onPress={() => updateItemCount(item.id, 1)}
         >
@@ -262,29 +288,35 @@ const ReservedItemsModal = ({
   return (
     <Modal visible={visible} animationType="slide">
       <View style={styles.modalContainer}>
-        <Text style={styles.modalTitle}>Reserved Items</Text>
+        <View style={styles.section}>
+          <Text style={styles.modalTitle}>Reserved Items</Text>
+          <View style={styles.listContainer}>
+            <FlatList
+              data={reservedItems}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={renderItem}
+            />
+          </View>
+        </View>
 
-        <FlatList
-          data={reservedItems}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={renderItem}
-        />
-
-        <Text style={styles.modalTitle}>Add More Items</Text>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search warehouse items"
-          value={searchText}
-          onChangeText={setSearchText}
-        />
-
-        <FlatList
-          data={warehouseItems.filter((item) =>
-            item.name.toLowerCase().includes(searchText.toLowerCase())
-          )}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={renderWarehouseItem}
-        />
+        <View style={styles.section}>
+          <Text style={styles.modalTitle}>Add More Items</Text>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search warehouse items"
+            value={searchText}
+            onChangeText={setSearchText}
+          />
+          <View style={styles.listContainer}>
+            <FlatList
+              data={warehouseItems.filter((item) =>
+                item.name.toLowerCase().includes(searchText.toLowerCase())
+              )}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={renderWarehouseItem}
+            />
+          </View>
+        </View>
 
         <TouchableOpacity style={styles.closeButton} onPress={onClose}>
           <Text style={styles.buttonText}>Close</Text>
@@ -297,17 +329,20 @@ const ReservedItemsModal = ({
 const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
-    padding: 20,
     backgroundColor: "white",
+  },
+  section: {
+    flex: 1,
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+  },
+  listContainer: {
+    flex: 1,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    marginBottom: 10,
-  },
-  modalSubtitle: {
-    fontSize: 16,
-    marginTop: 20,
     marginBottom: 10,
   },
   searchInput: {
@@ -327,7 +362,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 5,
     borderWidth: 2,
-    borderColor: "#A4D337", // Green border color
+    borderColor: "#A4D337",
   },
   itemInfo: {
     flex: 1,
@@ -349,19 +384,15 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 5,
-    marginTop: 20,
+    margin: 15,
   },
   warehouseItemInfo: {
     padding: 15,
     marginVertical: 5,
-    borderColor: "#A4D337", // Green border color
-    borderWidth: 2, // Border width
-    borderRadius: 5, // Optional: Rounded corners
-    backgroundColor: "white", // Background color for better visibility
-  },
-  itemText: {
-    fontSize: 16,
-    color: "black", // Text color
+    borderColor: "#A4D337",
+    borderWidth: 2,
+    borderRadius: 5,
+    backgroundColor: "white",
   },
   countControls: {
     flexDirection: 'row',

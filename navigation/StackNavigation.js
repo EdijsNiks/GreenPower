@@ -22,6 +22,7 @@ import WarehouseItemInfo from "../screens/Warehouse/WarehouseItemInfo";
 import AddItemToWarehouse from "../screens/Warehouse/AddItemToWarehouse";
 import AddItemToProject from "../screens/Projects/AddItemToProject";
 import AddSpotToWarehouse from "../screens/Warehouse/AddSpotToWarehouse";
+import WarehouseSpots from "../components/WarehouseSpots";
 
 const StackNavigation = () => {
   const Stack = createNativeStackNavigator();
@@ -208,6 +209,11 @@ const StackNavigation = () => {
           name="Main"
           component={BottomTabs}
           options={{ headerShown: false }}
+        />
+        <Stack.Screen
+        name="WarehouseSpots"
+        component={WarehouseSpots}  
+        options={{ headerShown: false }}
         />
       </Stack.Navigator>
     </NavigationContainer>
