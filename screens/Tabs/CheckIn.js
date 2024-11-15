@@ -1,42 +1,70 @@
-import React, { useLayoutEffect, useState, useEffect } from 'react';
-import { SafeAreaView, View, Text, Image, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import CustomAlert from '../../components/CheckInComp/CustomAlert';
+import React, { useLayoutEffect, useState, useEffect } from "react";
+import {
+  SafeAreaView,
+  View,
+  Text,
+  Image,
+  StyleSheet,
+  Dimensions,
+  TouchableOpacity,
+} from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import CustomAlert from "../../components/CheckInComp/CustomAlert";
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 
 const CheckIn = () => {
   const navigation = useNavigation();
   const [profile, setProfile] = useState(null);
   const [alertVisible, setAlertVisible] = useState(false);
-  const [alertMessage, setAlertMessage] = useState('');
+  const [alertMessage, setAlertMessage] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
 
   // Load user profile data from AsyncStorage on mount
   useEffect(() => {
     loadProfileData();
-    console.log(profile);
   }, []);
+
+  // Set up a midnight auto-checkout timer if the user is checked in
+  useEffect(() => {
+    if (profile?.checkedIn) {
+      const now = new Date();
+      const midnight = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() + 1, // Next day at 00:00
+        0,
+        0,
+        0
+      );
+      const timeUntilMidnight = midnight - now;
+
+      const timer = setTimeout(() => {
+        handleMidnightCheckOut();
+      }, timeUntilMidnight);
+
+      return () => clearTimeout(timer); // Clear timeout if component unmounts
+    }
+  }, [profile]);
 
   const loadProfileData = async () => {
     try {
-      const storedProfile = await AsyncStorage.getItem('profile');
+      const storedProfile = await AsyncStorage.getItem("profile");
       if (storedProfile) {
         setProfile(JSON.parse(storedProfile));
       }
     } catch (error) {
-      console.error('Error loading profile data:', error);
+      console.error("Error loading profile data:", error);
     }
   };
 
-  // Save user profile data to AsyncStorage
   const saveProfileData = async (updatedProfile) => {
     try {
-      await AsyncStorage.setItem('profile', JSON.stringify(updatedProfile));
+      await AsyncStorage.setItem("profile", JSON.stringify(updatedProfile));
       setProfile(updatedProfile);
     } catch (error) {
-      console.error('Error saving profile data:', error);
+      console.error("Error saving profile data:", error);
     }
   };
 
@@ -53,7 +81,6 @@ const CheckIn = () => {
       setShowConfirm(true);
       setAlertVisible(true);
     } else {
-      // User checks in
       const now = new Date();
       const updatedProfile = {
         ...profile,
@@ -70,39 +97,61 @@ const CheckIn = () => {
   const handleCheckOut = async () => {
     if (profile) {
       const now = new Date();
-      const timeSpent = calculateTotalTime(new Date(profile.checkedInTime), now);
+      const timeSpent = calculateTotalTime(
+        new Date(profile.checkedInTime),
+        now
+      );
       const updatedProfile = {
         ...profile,
         checkedIn: false,
         checkedInTime: null,
-        totalTime: profile.totalTime + timeSpent,
+        totalTime: (profile.totalTime || 0) + timeSpent,
       };
       await saveProfileData(updatedProfile);
 
-      // Format start and end times for display
       const checkInFormatted = formatDateTime(new Date(profile.checkedInTime));
       const checkOutFormatted = formatDateTime(now);
 
       setAlertMessage(
-        `You have checked out.\n\nStart: ${checkInFormatted}\nEnd: ${checkOutFormatted}\nTime spent: ${timeSpent.toFixed(2)} minutes.`
+        `You have checked out.\n\nStart: ${checkInFormatted}\nEnd: ${checkOutFormatted}\nTime spent: ${timeSpent.toFixed(
+          2
+        )} minutes.`
       );
       setShowConfirm(false);
       setAlertVisible(true);
     }
   };
 
+  const handleMidnightCheckOut = async () => {
+    if (profile?.checkedIn) {
+      const now = new Date();
+      const timeSpent = calculateTotalTime(
+        new Date(profile.checkedInTime),
+        now
+      );
+      const updatedProfile = {
+        ...profile,
+        checkedIn: false,
+        checkedInTime: null,
+        totalTime: (profile.totalTime || 0) + timeSpent,
+      };
+      await saveProfileData(updatedProfile);
+
+      console.log("User has been automatically checked out at midnight.");
+    }
+  };
+
   const calculateTotalTime = (start, end) => {
-    const timeSpent = (end - start) / 1000 / 60; // Time spent in minutes
-    return timeSpent;
+    return (end - start) / 1000 / 60; // Time spent in minutes
   };
 
   const formatDateTime = (date) => {
     const options = {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     };
     return date.toLocaleDateString(undefined, options);
   };
@@ -111,7 +160,10 @@ const CheckIn = () => {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.navbar}>
-          <Image source={require('../../assets/logo1.png')} style={styles.logo} />
+          <Image
+            source={require("../../assets/logo1.png")}
+            style={styles.logo}
+          />
           <Text style={styles.screenName}>CHECKIN</Text>
         </View>
         <View style={styles.profileContainer}>
@@ -124,7 +176,7 @@ const CheckIn = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.navbar}>
-        <Image source={require('../../assets/logo1.png')} style={styles.logo} />
+        <Image source={require("../../assets/logo1.png")} style={styles.logo} />
         <Text style={styles.screenName}>CHECKIN</Text>
       </View>
 
@@ -133,11 +185,13 @@ const CheckIn = () => {
         <Text style={styles.checkInText}>Check in to work</Text>
 
         <TouchableOpacity
-          style={profile.checkedIn ? styles.checkedInButton : styles.checkInButton}
+          style={
+            profile.checkedIn ? styles.checkedInButton : styles.checkInButton
+          }
           onPress={handleCheckIn}
         >
           <Text style={styles.buttonText}>
-            {profile.checkedIn ? 'Press to check out' : 'Press to check in'}
+            {profile.checkedIn ? "Press to check out" : "Press to check in"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -219,5 +273,3 @@ const styles = StyleSheet.create({
 });
 
 export default CheckIn;
-
-
