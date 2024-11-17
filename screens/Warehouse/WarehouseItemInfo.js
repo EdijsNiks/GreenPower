@@ -86,6 +86,62 @@ const WarehouseItemInfo = () => {
     const totalReserved = getTotalReservedForItem(itemDetails.id, projects);
     return itemDetails.count - totalReserved;
   };
+  const handleDeleteItem = async () => {
+    Alert.alert(
+      "Delete Item",
+      "Are you sure you want to delete this item? This action cannot be undone.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              // Check if item is reserved by any projects
+              const hasReservations = getProjectReservations().length > 0;
+
+              if (hasReservations) {
+                Alert.alert(
+                  "Error",
+                  "Cannot delete item that is reserved by projects. Please clear all reservations first."
+                );
+                return;
+              }
+
+              // Get all warehouse items
+              const warehouseItemsJson = await AsyncStorage.getItem("items");
+              if (warehouseItemsJson) {
+                const warehouseItems = JSON.parse(warehouseItemsJson);
+                // Filter out the deleted item
+                const updatedItems = warehouseItems.filter(
+                  (item) => item.id !== itemDetails.id
+                );
+                // Save updated items list
+                await AsyncStorage.setItem(
+                  "items",
+                  JSON.stringify(updatedItems)
+                );
+              }
+
+              // Navigate back to warehouse screen
+              navigation.navigate("Main", {
+                screen: "Warehouse",
+                params: {
+                  deletedItemId: itemDetails.id,
+                },
+              });
+            } catch (error) {
+              console.error("Error deleting item:", error);
+              Alert.alert("Error", "Failed to delete item");
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const handleReserveItem = async () => {
     if (!reservedCount || !selectedProject) {
@@ -176,6 +232,7 @@ const WarehouseItemInfo = () => {
         style: "default",
         onPress: async () => {
           try {
+            // Find the project and its reservation
             const projectToUpdate = projects.find(
               (project) => project.id === projectId
             );
@@ -184,6 +241,7 @@ const WarehouseItemInfo = () => {
             );
             const reservedCount = reservation ? parseInt(reservation.count) : 0;
 
+            // Update the projects array by removing the reservation
             const updatedProjects = projects.map((project) => {
               if (project.id === projectId) {
                 const updatedReserved = project.reserved.filter(
@@ -194,26 +252,49 @@ const WarehouseItemInfo = () => {
               return project;
             });
 
+            // Save updated projects to AsyncStorage
             await AsyncStorage.setItem(
               "projects",
               JSON.stringify(updatedProjects)
             );
             setProjects(updatedProjects);
 
-            // Update reservedProjectIds by removing the cleared project ID
+            // Update reservedProjectIds
             const updatedReservedIds = reservedProjectIds.filter(
               (id) => id !== projectId
             );
             setReservedProjectIds(updatedReservedIds);
 
+            // Update item details - SUBTRACT the reservedCount from the total count
             const updatedItem = {
               ...itemDetails,
-              count: itemDetails.count,
-              reserved: updatedReservedIds, // Ensure reserved is updated with the filtered array
+              count: Math.max(0, itemDetails.count), // Ensure count doesn't go below 0
+              reserved: updatedReservedIds,
             };
             setItemDetails(updatedItem);
 
-            Alert.alert("Success", "Reservation cleared successfully!");
+            // Update warehouse items in AsyncStorage
+            const warehouseItemsJson = await AsyncStorage.getItem(
+              "items"
+            );
+            if (warehouseItemsJson) {
+              const warehouseItems = JSON.parse(warehouseItemsJson);
+              const updatedWarehouseItems = warehouseItems.map((item) => {
+                if (item.id === itemDetails.id) {
+                  return updatedItem;
+                }
+                return item;
+              });
+              await AsyncStorage.setItem(
+                "items",
+                JSON.stringify(updatedWarehouseItems)
+              );
+            }
+
+            Alert.alert(
+              "Success",
+              "Reservation cleared and amount subtracted from total!"
+            );
           } catch (error) {
             console.error("Error clearing reservation:", error);
             Alert.alert("Error", "Failed to clear reservation");
@@ -225,6 +306,7 @@ const WarehouseItemInfo = () => {
         style: "destructive",
         onPress: async () => {
           try {
+            // Find the project and its reservation
             const projectToUpdate = projects.find(
               (project) => project.id === projectId
             );
@@ -233,6 +315,7 @@ const WarehouseItemInfo = () => {
             );
             const reservedCount = reservation ? parseInt(reservation.count) : 0;
 
+            // Update the projects array by removing the reservation
             const updatedProjects = projects.map((project) => {
               if (project.id === projectId) {
                 const updatedReserved = project.reserved.filter(
@@ -243,27 +326,48 @@ const WarehouseItemInfo = () => {
               return project;
             });
 
+            // Save updated projects to AsyncStorage
             await AsyncStorage.setItem(
               "projects",
               JSON.stringify(updatedProjects)
             );
             setProjects(updatedProjects);
 
+            // Update reservedProjectIds
             const updatedReservedIds = reservedProjectIds.filter(
               (id) => id !== projectId
             );
             setReservedProjectIds(updatedReservedIds);
 
+            // Update item details - ADD the reservedCount back to the total count
             const updatedItem = {
               ...itemDetails,
               count: itemDetails.count + reservedCount,
-              reserved: updatedReservedIds, // Update reserved as an array of project IDs
+              reserved: updatedReservedIds,
             };
             setItemDetails(updatedItem);
 
+            // Update warehouse items in AsyncStorage
+            const warehouseItemsJson = await AsyncStorage.getItem(
+              "items"
+            );
+            if (warehouseItemsJson) {
+              const warehouseItems = JSON.parse(warehouseItemsJson);
+              const updatedWarehouseItems = warehouseItems.map((item) => {
+                if (item.id === itemDetails.id) {
+                  return updatedItem;
+                }
+                return item;
+              });
+              await AsyncStorage.setItem(
+                "items",
+                JSON.stringify(updatedWarehouseItems)
+              );
+            }
+
             Alert.alert(
               "Success",
-              "Reservation cleared and item count restored!"
+              "Reservation cleared and amount added back to total!"
             );
           } catch (error) {
             console.error("Error clearing reservation:", error);
@@ -310,11 +414,17 @@ const WarehouseItemInfo = () => {
           <Text style={styles.itemDetails}>
             Total Count:{" "}
             {itemDetails?.count +
-              getTotalReservedForItem(itemDetails.id, projects)  || "N/A"}
+              getTotalReservedForItem(itemDetails.id, projects) || "N/A"}
           </Text>
           <Text style={styles.itemDetails}>
             Available Count: {itemDetails?.count - reservationCount || "0"}
           </Text>
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={handleDeleteItem}
+          >
+            <Text style={styles.buttonText}>Delete Item</Text>
+          </TouchableOpacity>
 
           {getProjectReservations().length > 0 && (
             <View style={styles.reservationsContainer}>
@@ -330,7 +440,7 @@ const WarehouseItemInfo = () => {
                   <TouchableOpacity
                     style={styles.clearReservationButton}
                     onPress={() => {
-                      setReservationCount(reservation.count);
+                      //setReservationCount(reservation.count);
                       handleClearProjectReservation(reservation.projectId);
                     }}
                   >
@@ -406,12 +516,7 @@ const WarehouseItemInfo = () => {
           <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
             <Text style={styles.buttonText}>Go Back</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={() =>
-              Alert.alert("Info", "Edit functionality coming soon")
-            }
-          >
+          <TouchableOpacity style={styles.editButton}>
             <Text style={styles.buttonText}>Edit Info</Text>
           </TouchableOpacity>
           <TouchableOpacity

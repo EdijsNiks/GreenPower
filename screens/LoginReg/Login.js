@@ -11,10 +11,11 @@ import {
   Dimensions,
   Alert,
 } from "react-native";
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { AuthContext } from "../../AuthContext";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -22,6 +23,8 @@ const Login = () => {
   const navigation = useNavigation();
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [isPressed, setIsPressed] = useState(false);
+  const { login } = useContext(AuthContext);
+
 
   const togglePasswordVisibility = () => setPasswordVisible(!passwordVisible);
 
@@ -34,8 +37,8 @@ const Login = () => {
 
         // Verify the email and password
         if (userProfile.email === email && userProfile.password === password) {
+          login("mockToken")
           Alert.alert("Welcome!", "Login successful!");
-          navigation.replace("Main");
         } else {
           Alert.alert("Error", "Invalid email or password.");
         }
@@ -97,8 +100,7 @@ const Login = () => {
         <Pressable
           onPressIn={() => setIsPressed(true)}
           onPressOut={() => setIsPressed(false)}
-          onPress={()=> navigation.replace("Main")}
-          //onPress={handleLogin}
+          onPress={handleLogin}
         >
           <LinearGradient
             colors={isPressed ? ["#A4D337", "#A4D337"] : ["#A4D337", "#7CB518"]}

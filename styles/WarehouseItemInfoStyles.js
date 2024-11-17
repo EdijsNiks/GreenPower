@@ -260,6 +260,12 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "bold",
   },
+  deleteButton: {
+    backgroundColor: '#FF0000',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+  },
 });
 
 export default styles;

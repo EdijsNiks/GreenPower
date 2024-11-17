@@ -192,6 +192,12 @@ const styles = StyleSheet.create({
       fontWeight: "bold",
       marginBottom: 10,
     },
+    deleteButton: {
+      backgroundColor: '#FF0000',
+      paddingVertical: 10,
+      paddingHorizontal: 20,
+      borderRadius: 5,
+    },
   });
 
   export default styles;

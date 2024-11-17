@@ -114,6 +114,7 @@ const Warehouse = ({ route }) => {
             : item
         );
         try {
+          console.log(updatedItems);
           await AsyncStorage.setItem("items", JSON.stringify(updatedItems));
           setTaskList(updatedItems);
           setFilteredTaskList(updatedItems);

@@ -8,6 +8,7 @@ import {
   ScrollView,
   Dimensions,
   Modal,
+  Alert,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -25,7 +26,7 @@ const ProjectsInfo = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [photos, setPhotos] = useState([]);
-  
+
   // Save photo to local filesystem
   const savePhotoToFileSystem = async (uri) => {
     try {
@@ -36,7 +37,10 @@ const ProjectsInfo = () => {
       const fileName = uri.split("/").pop();
       const localUri = FileSystem.documentDirectory + fileName;
 
-      const { uri: localFileUri } = await FileSystem.downloadAsync(uri, localUri);
+      const { uri: localFileUri } = await FileSystem.downloadAsync(
+        uri,
+        localUri
+      );
       return localFileUri;
     } catch (error) {
       console.error("Error saving photo:", error);
@@ -44,9 +48,69 @@ const ProjectsInfo = () => {
     }
   };
 
+  const handleDeleteProject = async () => {
+    Alert.alert(
+      "Delete Project",
+      "Are you sure you want to delete this project? This action cannot be undone.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              // 1. Remove project from AsyncStorage
+              await AsyncStorage.removeItem(`project_${project.id}`);
+              
+              // 2. Update projects list
+              const projectsJson = await AsyncStorage.getItem('projects');
+              if (projectsJson) {
+                const projects = JSON.parse(projectsJson);
+                const updatedProjects = projects.filter(p => p.id !== project.id);
+                await AsyncStorage.setItem('projects', JSON.stringify(updatedProjects));
+              }
+
+              // 3. Clean up warehouse items' reserved arrays
+              const warehouseItemsJson = await AsyncStorage.getItem('items');
+              if (warehouseItemsJson) {
+                const warehouseItems = JSON.parse(warehouseItemsJson);
+                
+                // Remove the project ID from all items' reserved arrays
+                const updatedWarehouseItems = warehouseItems.map(item => {
+                  if (item.reserved && Array.isArray(item.reserved)) {
+                    return {
+                      ...item,
+                      reserved: item.reserved.filter(id => id !== project.id)
+                    };
+                  }
+                  return item;
+                });
+
+                // Save updated warehouse items
+                await AsyncStorage.setItem('items', JSON.stringify(updatedWarehouseItems));
+              }
+              
+              // 4. Navigate back to projects screen
+              navigation.navigate("Main", { screen: "Projects" });
+            } catch (error) {
+              console.error("Error deleting project:", error);
+              Alert.alert("Error", "Failed to delete project");
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const saveProjectToAsyncStorage = async (updatedProject) => {
     try {
-      await AsyncStorage.setItem(`project_${updatedProject.id}`, JSON.stringify(updatedProject));
+      await AsyncStorage.setItem(
+        `project_${updatedProject.id}`,
+        JSON.stringify(updatedProject)
+      );
     } catch (error) {
       console.error("Error updating AsyncStorage:", error);
     }
@@ -57,17 +121,17 @@ const ProjectsInfo = () => {
       // Save selected photo to the project object
       const updatedPhotos = [...project.photos, selectedPhoto];
       const updatedProject = { ...project, photos: updatedPhotos };
-      
+
       // Update AsyncStorage with the new project object
       await saveProjectToAsyncStorage(updatedProject);
-      
+
       // Update the project object state (for re-rendering)
       project.photos = updatedPhotos;
       console.log(project.photos);
-      
+
       // Close the photo picker modal
       setModalVisible(false);
-      
+
       // Clear the selected photo
       setSelectedPhoto(null);
     }
@@ -107,7 +171,13 @@ const ProjectsInfo = () => {
         <View style={styles.projectInfo}>
           <Text style={styles.infoText}>NAME: {project.name}</Text>
           <Text style={styles.infoText}>Category: {project.category}</Text>
-          <Text style={styles.infoText}>Created at: {project.dateCreated}</Text>
+          <Text style={styles.infoText}>Created at: {project.dateCreated}</Text>  
+                  <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={handleDeleteProject}
+          >
+            <Text style={styles.buttonText}>Delete Project</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.paddingBetweenSection}></View>
@@ -127,13 +197,14 @@ const ProjectsInfo = () => {
         <View style={styles.buttonRow}>
           <TouchableOpacity
             style={styles.finishButtonBack}
-            onPress={() => navigation.navigate("Main", { screen: "Tasks" })}
+            onPress={() => navigation.navigate("Main", { screen: "Projects" })}
           >
             <Text style={styles.buttonText}>Go back</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.editButton}>
             <Text style={styles.buttonText}>Edit Info</Text>
           </TouchableOpacity>
+
           <TouchableOpacity style={styles.finishButton}>
             <Text style={styles.buttonText}>Finish Project</Text>
           </TouchableOpacity>
@@ -371,6 +442,12 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "white",
     fontWeight: "bold",
+  },
+  deleteButton: {
+    backgroundColor: '#FF0000',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
   },
 });
 

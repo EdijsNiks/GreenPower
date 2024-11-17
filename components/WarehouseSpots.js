@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const WarehouseSpots = ({ isVisible, spotId, onClose, onSave, navigation }) => {
+const WarehouseSpots = ({ isVisible, spotId, onClose, onSave }) => {
   const [spotData, setSpotData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -33,11 +33,12 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, onSave, navigation }) => {
   }, [isVisible, spotId]);
 
   useEffect(() => {
-    const filtered = warehouseItems.filter((item) =>
-      item.name.toLowerCase().includes((searchQuery || "").toLowerCase())
+    // Filter available items to exclude reserved items
+    const reservedItemIds = new Set(spotItems.map((item) => item.id));
+    setFilteredItems(
+      warehouseItems.filter((item) => !reservedItemIds.has(item.id))
     );
-    setFilteredItems(filtered);
-  }, [searchQuery, warehouseItems]);
+  }, [warehouseItems, spotItems]);
 
   const loadSpotData = async () => {
     try {
@@ -57,37 +58,110 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, onSave, navigation }) => {
 
       setSpotData(currentSpot);
 
-      // Process spot items
+      const spotItemCounts = {};
+      currentSpot.items.forEach((item) => {
+        spotItemCounts[item.itemId] = item.count;
+      });
+
       const spotItemsArray = Array.isArray(currentSpot.items)
         ? currentSpot.items
         : [];
       const fullSpotItems = spotItemsArray
         .map((spotItem) => {
           if (!spotItem?.itemId) return null;
-          const item = items.find((i) => i.id === spotItem.itemId);
-          return item
-            ? {
-                ...item,
-                count: spotItem.count || 0,
-              }
-            : null;
+          const warehouseItem = items.find((i) => i.id === spotItem.itemId);
+          if (!warehouseItem) return null;
+
+          const effectiveCount = Math.min(
+            spotItem.count || 0,
+            warehouseItem.count || 0
+          );
+
+          return {
+            ...warehouseItem,
+            count: effectiveCount,
+          };
         })
         .filter(Boolean);
 
       setSpotItems(fullSpotItems);
 
-      // Set available warehouse items
+      const updates = {};
+      fullSpotItems.forEach((item) => {
+        updates[item.id] = item.count;
+      });
+      setItemCountUpdates(updates);
+
       const spotItemIds = new Set(spotItemsArray.map((item) => item.itemId));
       const availableItems = items.filter((item) => !spotItemIds.has(item.id));
 
       setWarehouseItems(availableItems);
-      setFilteredItems(availableItems);
-      setHasChanges(false);
     } catch (error) {
       console.error("Error loading data:", error);
       Alert.alert("Error", "Failed to load spot data");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveAndClose = async () => {
+    try {
+      setSaving(true);
+
+      const [itemsData, spotsData] = await Promise.all([
+        AsyncStorage.getItem("items"),
+        AsyncStorage.getItem("spots"),
+      ]);
+
+      let allItems = itemsData ? JSON.parse(itemsData) : [];
+      let spots = spotsData ? JSON.parse(spotsData) : [];
+
+      const updatedSpots = spots.map((spot) => {
+        if (spot.spotId === spotId) {
+          return {
+            ...spot,
+            items: spotItems.map((item) => ({
+              itemId: item.id,
+              count: itemCountUpdates[item.id] || item.count || 0,
+            })),
+          };
+        }
+        return spot;
+      });
+
+      const updatedAllItems = allItems.map((item) => {
+        const spotItem = spotItems.find((si) => si.id === item.id);
+        if (spotItem) {
+          return {
+            ...item,
+            count: Math.max(
+              item.count,
+              itemCountUpdates[item.id] || spotItem.count || 0
+            ),
+          };
+        }
+        return item;
+      });
+
+      await Promise.all([
+        AsyncStorage.setItem("spots", JSON.stringify(updatedSpots)),
+        AsyncStorage.setItem("items", JSON.stringify(updatedAllItems)),
+      ]);
+
+      onSave(
+        spotItems.map((item) => ({
+          id: item.id,
+          count: itemCountUpdates[item.id] || item.count || 0,
+          name: item.name,
+        }))
+      );
+
+      onClose(updatedAllItems);
+    } catch (error) {
+      console.error("Error saving spot data:", error);
+      Alert.alert("Error", "Failed to save spot data");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -100,11 +174,9 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, onSave, navigation }) => {
       const spotsData = await AsyncStorage.getItem("spots");
       let spots = spotsData ? JSON.parse(spotsData) : [];
 
-      // Find the spot index
       const spotIndex = spots.findIndex((spot) => spot.spotId === spotId);
 
       if (spotIndex === -1) {
-        // Create new spot if it doesn't exist
         spots.push({
           spotId,
           items: [
@@ -115,7 +187,6 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, onSave, navigation }) => {
           ],
         });
       } else {
-        // Update existing spot
         spots[spotIndex] = {
           ...spots[spotIndex],
           items: [
@@ -129,8 +200,10 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, onSave, navigation }) => {
 
       await AsyncStorage.setItem("spots", JSON.stringify(spots));
 
-      // Update local state
-      setSpotItems((prev) => [...prev, { ...selectedItem, count: selectedItem.count }]);
+      setSpotItems((prev) => [
+        ...prev,
+        { ...selectedItem, count: selectedItem.count },
+      ]);
       setWarehouseItems((prev) =>
         prev.filter((item) => item.id !== selectedItem.id)
       );
@@ -187,7 +260,6 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, onSave, navigation }) => {
 
       const newCount = (itemToUpdate.count || 0) + parsedAdditionalCount;
 
-      // Update the item count in the itemCountUpdates object
       setItemCountUpdates((prev) => ({
         ...prev,
         [itemId]: newCount,
@@ -200,50 +272,6 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, onSave, navigation }) => {
       Alert.alert("Error", "Failed to save item count");
     }
   };
-
-  const handleSaveAndClose = async () => {
-    try {
-      setSaving(true);
-
-      // Get current items data
-      const itemsData = await AsyncStorage.getItem("items");
-      let allItems = itemsData ? JSON.parse(itemsData) : [];
-
-      // Update the items with new counts
-      const updatedAllItems = allItems.map(item => {
-        const spotItem = spotItems.find(si => si.id === item.id);
-        if (spotItem) {
-          return {
-            ...item,
-            count: itemCountUpdates[item.id] || spotItem.count || 0
-          };
-        }
-        return item;
-      });
-
-      // Save updated items to AsyncStorage
-      await AsyncStorage.setItem("items", JSON.stringify(updatedAllItems));
-
-      // Update the spotItems with the latest counts
-      const updatedSpotItems = spotItems.map((item) => ({
-        id: item.id,
-        count: itemCountUpdates[item.id] || item.count || 0,
-        name: item.name,
-      }));
-
-      // Call the parent's onSave callback with the updated items
-      await onSave(updatedSpotItems);
-
-      // Pass the updated items back to the Warehouse component
-      onClose(updatedAllItems);
-    } catch (error) {
-      console.error("Error saving spot data:", error);
-      Alert.alert("Error", "Failed to save spot data");
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const handleTextChange = (itemId, text) => {
     setLocalInputs((prev) => ({
       ...prev,
@@ -296,9 +324,7 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, onSave, navigation }) => {
 
   const renderSpotItem = ({ item }) => (
     <View style={styles.itemContainer}>
-      <TouchableOpacity
-        style={styles.itemInfo}
-      >
+      <TouchableOpacity style={styles.itemInfo}>
         <Text style={styles.itemText}>{item.name}</Text>
         <Text style={styles.count}>Count: {item.count}</Text>
       </TouchableOpacity>

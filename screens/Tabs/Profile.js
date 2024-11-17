@@ -1,7 +1,16 @@
-import { StyleSheet, Text, View, Image, SafeAreaView, Dimensions, Pressable } from "react-native";
-import React, { useLayoutEffect, useState, useEffect } from "react";
+import {
+  StyleSheet,
+  Text,
+  View,
+  Image,
+  SafeAreaView,
+  Dimensions,
+  Pressable,
+} from "react-native";
+import React, { useLayoutEffect, useState, useEffect, useContext } from "react";
 import { useNavigation, useIsFocused } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import {AuthContext} from "../../AuthContext";
 
 const { width } = Dimensions.get("window");
 
@@ -12,12 +21,13 @@ const Profile = () => {
   const [isCheckedIn, setIsCheckedIn] = useState(true);
   const [isPressed, setIsPressed] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const { logout } = useContext(AuthContext);
 
   useEffect(() => {
     /////////// Fetch User Data ///////////
     const fetchUserData = async () => {
       try {
-        const userProfileString = await AsyncStorage.getItem('profile');
+        const userProfileString = await AsyncStorage.getItem("profile");
         if (userProfileString) {
           const userProfile = JSON.parse(userProfileString);
           console.log("User data retrieved from AsyncStorage:", userProfile);
@@ -44,11 +54,7 @@ const Profile = () => {
 
   const handleLogout = () => {
     /////////// Logout Functionality ///////////
-    // Reset the application state without clearing AsyncStorage
-    setCurrentUser(null);
-    setIsCheckedIn(true);
-    setIsAdmin(false);
-    navigation.replace("Login");
+    logout();
   };
 
   const handleAdminPage = () => {
@@ -73,8 +79,13 @@ const Profile = () => {
             {/* Check-in Status */}
             <View style={styles.checkInContainer}>
               <Text style={styles.checkInLabel}>Checked In:</Text>
-              <Text style={[styles.checkInStatus, { color: currentUser.checkedIn ? 'green' : 'red' }]}>
-                {currentUser.checkedIn ? 'Yes' : 'No'}
+              <Text
+                style={[
+                  styles.checkInStatus,
+                  { color: currentUser.checkedIn ? "green" : "red" },
+                ]}
+              >
+                {currentUser.checkedIn ? "Yes" : "No"}
               </Text>
             </View>
 
@@ -84,7 +95,12 @@ const Profile = () => {
               onPressOut={() => setIsPressed(false)}
               onPress={handleLogout}
             >
-              <View style={[styles.logoutButton, { backgroundColor: isPressed ? '#A4D337' : '#7CB518' }]}>
+              <View
+                style={[
+                  styles.logoutButton,
+                  { backgroundColor: isPressed ? "#A4D337" : "#7CB518" },
+                ]}
+              >
                 <Text style={styles.logoutButtonText}>Logout</Text>
               </View>
             </Pressable>
@@ -200,5 +216,3 @@ const styles = StyleSheet.create({
 });
 
 export default Profile;
-
-

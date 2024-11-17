@@ -1,5 +1,5 @@
-import { StyleSheet, Image } from "react-native";
-import React from "react";
+import { StyleSheet, View } from "react-native";
+import React, { useContext } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
@@ -23,10 +23,15 @@ import AddItemToWarehouse from "../screens/Warehouse/AddItemToWarehouse";
 import AddItemToProject from "../screens/Projects/AddItemToProject";
 import AddSpotToWarehouse from "../screens/Warehouse/AddSpotToWarehouse";
 import WarehouseSpots from "../components/WarehouseSpots";
+import { AuthContext } from "../../GreenPower/AuthContext";
 
 const StackNavigation = () => {
   const Stack = createNativeStackNavigator();
   const Tab = createBottomTabNavigator();
+  const { userToken, loading } = useContext(AuthContext);
+  if (loading) {
+    return <View />;
+  }
 
   // Bottom tab navigation
   function BottomTabs() {
@@ -110,8 +115,8 @@ const StackNavigation = () => {
             Projects: {
               path: "projects",
               screens: {
-              ProjectsHome: "",
-              //  ProjectsInfo: "item-info",
+                ProjectsHome: "",
+                //  ProjectsInfo: "item-info",
                 AddItemToProject: "add-item",
               },
             },
@@ -119,7 +124,7 @@ const StackNavigation = () => {
               path: "warehouse",
               screens: {
                 WarehouseHome: "",
-               // WarehouseItemInfo: "item-info",
+                // WarehouseItemInfo: "item-info",
                 AddItemToWarehouse: "add-item",
               },
             },
@@ -131,7 +136,6 @@ const StackNavigation = () => {
         AdminPage: "admin",
         ViewAll: "view-all",
         WarehouseItemInfo: "warehouse/item-info",
-
       },
     },
   };
@@ -140,81 +144,86 @@ const StackNavigation = () => {
   return (
     <NavigationContainer linking={linking}>
       <Stack.Navigator>
-        <Stack.Screen
-          name="Login"
-          component={Login}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="Registration"
-          component={Registration}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen 
-        name="Profile" 
-        component={Profile} 
-        />
-
-        <Stack.Screen
-          name="CheckIn"
-          component={CheckIn}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="Warehouse"
-          component={Warehouse}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="Tasks"
-          component={Projects}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="ProjectsInfo"
-          component={ProjectsInfo}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="WarehouseItemInfo"
-          component={WarehouseItemInfo}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="AdminPage"
-          component={AdminPage}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="AddItemToProject"
-          component={AddItemToProject}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="AddItemToWarehouse"
-          component={AddItemToWarehouse}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="ViewAll"
-          component={ViewAll}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="AddSpotToWarehouse"
-          component={AddSpotToWarehouse}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="Main"
-          component={BottomTabs}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-        name="WarehouseSpots"
-        component={WarehouseSpots}  
-        options={{ headerShown: false }}
-        />
+        {!userToken ? (
+          // If not logged in, show login and registration
+          <>
+            <Stack.Screen
+              name="Login"
+              component={Login}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="Registration"
+              component={Registration}
+              options={{ headerShown: false }}
+            />
+          </>
+        ) : (
+          // If logged in, show the main app with tabs and other screens
+          <>
+            <Stack.Screen
+              name="Main"
+              component={BottomTabs}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen name="Profile" component={Profile} />
+            <Stack.Screen
+              name="CheckIn"
+              component={CheckIn}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="Warehouse"
+              component={Warehouse}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="Projects"
+              component={Projects}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="ProjectsInfo"
+              component={ProjectsInfo}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="WarehouseItemInfo"
+              component={WarehouseItemInfo}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="AdminPage"
+              component={AdminPage}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="AddItemToProject"
+              component={AddItemToProject}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="AddItemToWarehouse"
+              component={AddItemToWarehouse}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="ViewAll"
+              component={ViewAll}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="AddSpotToWarehouse"
+              component={AddSpotToWarehouse}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="WarehouseSpots"
+              component={WarehouseSpots}
+              options={{ headerShown: false }}
+            />
+          </>
+        )}
       </Stack.Navigator>
     </NavigationContainer>
   );
