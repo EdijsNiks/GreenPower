@@ -1,26 +1,28 @@
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 const CustomAlert = ({ visible, message, onClose, onConfirm, showConfirm }) => {
+  const { t } = useTranslation();
+
   return (
     <Modal transparent={true} visible={visible} animationType="fade">
       <View style={styles.overlay}>
         <View style={styles.alertContainer}>
           <Text style={styles.message}>{message}</Text>
           
-          {/* Conditional rendering for confirmation buttons or a single OK button */}
           {showConfirm ? (
             <View style={styles.buttonContainer}>
               <TouchableOpacity style={styles.noButton} onPress={onClose}>
-                <Text style={styles.noButtonText}>No</Text>
+                <Text style={styles.noButtonText}>{t('no')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.yesButton} onPress={onConfirm}>
-                <Text style={styles.yesButtonText}>Yes</Text>
+                <Text style={styles.yesButtonText}>{t('yes')}</Text>
               </TouchableOpacity>
             </View>
           ) : (
             <TouchableOpacity style={styles.okButton} onPress={onClose}>
-              <Text style={styles.okButtonText}>OK</Text>
+              <Text style={styles.okButtonText}>{t('ok')}</Text>
             </TouchableOpacity>
           )}
         </View>

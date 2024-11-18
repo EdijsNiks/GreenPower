@@ -15,14 +15,17 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 const { width } = Dimensions.get("window");
 
+import { useTranslation } from "react-i18next";
+
 const AddSpotToWarehouse = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation();
   const [spotId, setSpotId] = useState("");
   const [description, setDescription] = useState("");
 
   const saveSpot = async () => {
     if (!spotId || !description) {
-      Alert.alert("Error", "Please enter both spot ID and description.");
+      Alert.alert(t('error'), t('missingFields'));
       return;
     }
 
@@ -44,7 +47,7 @@ const AddSpotToWarehouse = () => {
       spots.push(newSpot);
       await AsyncStorage.setItem("spots", JSON.stringify(spots));
 
-      Alert.alert("Success", "Spot saved successfully!", [
+      Alert.alert(t('success'), t('spotSaved'), [
         {
           text: "OK",
           onPress: () => {
@@ -57,7 +60,7 @@ const AddSpotToWarehouse = () => {
       ]);
     } catch (error) {
       console.error("Error saving spot:", error);
-      Alert.alert("Error", "There was an issue saving the spot.");
+      Alert.alert(t('error'), t('saveError'));
     }
   };
 
@@ -65,20 +68,20 @@ const AddSpotToWarehouse = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.navbar}>
         <Image source={require("../../assets/logo1.png")} style={styles.logo} />
-        <Text style={styles.screenName}>Add Spot</Text>
+        <Text style={styles.screenName}>{t('addSpot')}</Text>
       </View>
 
       <ScrollView>
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Spot ID"
+            placeholder={t('spotId')}
             value={spotId}
             onChangeText={setSpotId}
           />
           <TextInput
             style={styles.input}
-            placeholder="Description"
+            placeholder={t('description')}
             value={description}
             onChangeText={setDescription}
             multiline
@@ -90,13 +93,13 @@ const AddSpotToWarehouse = () => {
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.buttonText}>Go Back</Text>
+            <Text style={styles.buttonText}>{t('goBack')}</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.saveButton} 
             onPress={saveSpot}
           >
-            <Text style={styles.buttonText}>Save Spot</Text>
+            <Text style={styles.buttonText}>{t('saveSpot')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

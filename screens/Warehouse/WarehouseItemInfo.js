@@ -13,9 +13,12 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import styles from "../../styles/WarehouseItemInfoStyles.js";
+import { useTranslation } from "react-i18next";
 
 const WarehouseItemInfo = () => {
   const navigation = useNavigation();
+  const { t } = useTranslation();
+
   const route = useRoute();
   const { itemData } = route.params;
 
@@ -27,7 +30,7 @@ const WarehouseItemInfo = () => {
   const [projects, setProjects] = useState([]);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [reservedProjectIds, setReservedProjectIds] = useState([]);
-  const [reservationCount, setReservationCount] = useState(0); // New state variable
+  const [reservationCount, setReservationCount] = useState(0);
 
   const getProjectReservations = () => {
     return projects.reduce((acc, project) => {
@@ -69,7 +72,7 @@ const WarehouseItemInfo = () => {
       }
     } catch (error) {
       console.error("Error loading projects:", error);
-      Alert.alert("Error", "Failed to load projects");
+      Alert.alert(t("error"), t("failedToLoadProjects"));
     }
   };
 
@@ -86,72 +89,58 @@ const WarehouseItemInfo = () => {
     const totalReserved = getTotalReservedForItem(itemDetails.id, projects);
     return itemDetails.count - totalReserved;
   };
+
   const handleDeleteItem = async () => {
-    Alert.alert(
-      "Delete Item",
-      "Are you sure you want to delete this item? This action cannot be undone.",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              // Check if item is reserved by any projects
-              const hasReservations = getProjectReservations().length > 0;
+    Alert.alert(t("deleteItem"), t("deleteItemConfirmation"), [
+      {
+        text: t("cancel"),
+        style: "cancel",
+      },
+      {
+        text: t("delete"),
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const hasReservations = getProjectReservations().length > 0;
 
-              if (hasReservations) {
-                Alert.alert(
-                  "Error",
-                  "Cannot delete item that is reserved by projects. Please clear all reservations first."
-                );
-                return;
-              }
-
-              // Get all warehouse items
-              const warehouseItemsJson = await AsyncStorage.getItem("items");
-              if (warehouseItemsJson) {
-                const warehouseItems = JSON.parse(warehouseItemsJson);
-                // Filter out the deleted item
-                const updatedItems = warehouseItems.filter(
-                  (item) => item.id !== itemDetails.id
-                );
-                // Save updated items list
-                await AsyncStorage.setItem(
-                  "items",
-                  JSON.stringify(updatedItems)
-                );
-              }
-
-              // Navigate back to warehouse screen
-              navigation.navigate("Main", {
-                screen: "Warehouse",
-                params: {
-                  deletedItemId: itemDetails.id,
-                },
-              });
-            } catch (error) {
-              console.error("Error deleting item:", error);
-              Alert.alert("Error", "Failed to delete item");
+            if (hasReservations) {
+              Alert.alert(t("error"), t("cannotDeleteReserved"));
+              return;
             }
-          },
+
+            const warehouseItemsJson = await AsyncStorage.getItem("items");
+            if (warehouseItemsJson) {
+              const warehouseItems = JSON.parse(warehouseItemsJson);
+              const updatedItems = warehouseItems.filter(
+                (item) => item.id !== itemDetails.id
+              );
+              await AsyncStorage.setItem("items", JSON.stringify(updatedItems));
+            }
+
+            navigation.navigate("Main", {
+              screen: "Warehouse",
+              params: {
+                deletedItemId: itemDetails.id,
+              },
+            });
+          } catch (error) {
+            console.error("Error deleting item:", error);
+            Alert.alert(t("error"), t("failedToDeleteItem"));
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleReserveItem = async () => {
     if (!reservedCount || !selectedProject) {
-      Alert.alert("Error", "Please select a project and enter reserved count.");
+      Alert.alert(t("error"), t("selectProjectAndCount"));
       return;
     }
 
     const reserveAmount = parseInt(reservedCount);
     if (isNaN(reserveAmount) || reserveAmount <= 0) {
-      Alert.alert("Error", "Please enter a valid number greater than 0.");
+      Alert.alert(t("error"), t("enterValidNumber"));
       return;
     }
 
@@ -164,7 +153,7 @@ const WarehouseItemInfo = () => {
       : 0;
 
     if (reserveAmount >= itemDetails.count) {
-      Alert.alert("Error", "Cannot reserve more items than available.");
+      Alert.alert(t("error"), t("cannotReserveMoreThanAvailable"));
       return;
     }
 
@@ -200,7 +189,6 @@ const WarehouseItemInfo = () => {
       await AsyncStorage.setItem("projects", JSON.stringify(updatedProjects));
       setProjects(updatedProjects);
 
-      // Update reservedProjectIds to include selectedProject.id as an array
       const updatedReservedIds = [
         ...new Set([...reservedProjectIds, selectedProject.id]),
       ];
@@ -209,7 +197,7 @@ const WarehouseItemInfo = () => {
       const updatedItem = {
         ...itemDetails,
         count: itemDetails.count - reserveAmount,
-        reserved: updatedReservedIds, // Update reserved as an array of project IDs
+        reserved: updatedReservedIds,
       };
       setItemDetails(updatedItem);
 
@@ -217,22 +205,21 @@ const WarehouseItemInfo = () => {
       setSelectedProject(null);
       setShowReserveSection(false);
 
-      Alert.alert("Success", "Item reserved successfully!");
+      Alert.alert(t("success"), t("itemReservedSuccessfully"));
     } catch (error) {
       console.error("Error in handleReserveItem:", error);
-      Alert.alert("Error", "Failed to reserve item");
+      Alert.alert(t("error"), t("failedToReserveItem"));
     }
   };
 
   const handleClearProjectReservation = async (projectId) => {
-    Alert.alert("Clear Reservation", "What do you want to do?", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t("clearReservation"), t("whatToDoWithReservation"), [
+      { text: t("cancel"), style: "cancel" },
       {
-        text: "Subtract reserved amount",
+        text: t("subtractReservedAmount"),
         style: "default",
         onPress: async () => {
           try {
-            // Find the project and its reservation
             const projectToUpdate = projects.find(
               (project) => project.id === projectId
             );
@@ -241,7 +228,6 @@ const WarehouseItemInfo = () => {
             );
             const reservedCount = reservation ? parseInt(reservation.count) : 0;
 
-            // Update the projects array by removing the reservation
             const updatedProjects = projects.map((project) => {
               if (project.id === projectId) {
                 const updatedReserved = project.reserved.filter(
@@ -252,31 +238,25 @@ const WarehouseItemInfo = () => {
               return project;
             });
 
-            // Save updated projects to AsyncStorage
             await AsyncStorage.setItem(
               "projects",
               JSON.stringify(updatedProjects)
             );
             setProjects(updatedProjects);
 
-            // Update reservedProjectIds
             const updatedReservedIds = reservedProjectIds.filter(
               (id) => id !== projectId
             );
             setReservedProjectIds(updatedReservedIds);
 
-            // Update item details - SUBTRACT the reservedCount from the total count
             const updatedItem = {
               ...itemDetails,
-              count: Math.max(0, itemDetails.count), // Ensure count doesn't go below 0
+              count: Math.max(0, itemDetails.count),
               reserved: updatedReservedIds,
             };
             setItemDetails(updatedItem);
 
-            // Update warehouse items in AsyncStorage
-            const warehouseItemsJson = await AsyncStorage.getItem(
-              "items"
-            );
+            const warehouseItemsJson = await AsyncStorage.getItem("items");
             if (warehouseItemsJson) {
               const warehouseItems = JSON.parse(warehouseItemsJson);
               const updatedWarehouseItems = warehouseItems.map((item) => {
@@ -291,22 +271,18 @@ const WarehouseItemInfo = () => {
               );
             }
 
-            Alert.alert(
-              "Success",
-              "Reservation cleared and amount subtracted from total!"
-            );
+            Alert.alert(t("success"), t("reservationClearedAndSubtracted"));
           } catch (error) {
             console.error("Error clearing reservation:", error);
-            Alert.alert("Error", "Failed to clear reservation");
+            Alert.alert(t("error"), t("failedToClearReservation"));
           }
         },
       },
       {
-        text: "Add reserved amount back",
+        text: t("addReservedAmountBack"),
         style: "destructive",
         onPress: async () => {
           try {
-            // Find the project and its reservation
             const projectToUpdate = projects.find(
               (project) => project.id === projectId
             );
@@ -315,7 +291,6 @@ const WarehouseItemInfo = () => {
             );
             const reservedCount = reservation ? parseInt(reservation.count) : 0;
 
-            // Update the projects array by removing the reservation
             const updatedProjects = projects.map((project) => {
               if (project.id === projectId) {
                 const updatedReserved = project.reserved.filter(
@@ -326,20 +301,17 @@ const WarehouseItemInfo = () => {
               return project;
             });
 
-            // Save updated projects to AsyncStorage
             await AsyncStorage.setItem(
               "projects",
               JSON.stringify(updatedProjects)
             );
             setProjects(updatedProjects);
 
-            // Update reservedProjectIds
             const updatedReservedIds = reservedProjectIds.filter(
               (id) => id !== projectId
             );
             setReservedProjectIds(updatedReservedIds);
 
-            // Update item details - ADD the reservedCount back to the total count
             const updatedItem = {
               ...itemDetails,
               count: itemDetails.count + reservedCount,
@@ -347,10 +319,7 @@ const WarehouseItemInfo = () => {
             };
             setItemDetails(updatedItem);
 
-            // Update warehouse items in AsyncStorage
-            const warehouseItemsJson = await AsyncStorage.getItem(
-              "items"
-            );
+            const warehouseItemsJson = await AsyncStorage.getItem("items");
             if (warehouseItemsJson) {
               const warehouseItems = JSON.parse(warehouseItemsJson);
               const updatedWarehouseItems = warehouseItems.map((item) => {
@@ -365,20 +334,17 @@ const WarehouseItemInfo = () => {
               );
             }
 
-            Alert.alert(
-              "Success",
-              "Reservation cleared and amount added back to total!"
-            );
+            Alert.alert(t("success"), t("reservationClearedAndAdded"));
           } catch (error) {
             console.error("Error clearing reservation:", error);
-            Alert.alert("Error", "Failed to clear reservation");
+            Alert.alert(t("error"), t("failedToClearReservation"));
           }
         },
       },
     ]);
   };
+
   const handleGoBack = () => {
-    // Pass updated item and reservedProjectIds back to Warehouse screen
     navigation.navigate("Main", {
       screen: "Warehouse",
       params: {
@@ -399,52 +365,53 @@ const WarehouseItemInfo = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.navbar}>
         <Image source={require("../../assets/logo1.png")} style={styles.logo} />
-        <Text style={styles.screenName}>Item Info</Text>
+        <Text style={styles.screenName}>{t("itemInfo")}</Text>
       </View>
 
       <ScrollView style={styles.scrollContainer}>
-        {/* Item Info Section */}
         <View style={styles.itemInfoContainer}>
           <Text style={styles.itemName}>
-            NAME: {itemDetails?.name || "N/A"}
+            {t("name")}: {itemDetails?.name || t("na")}
           </Text>
           <Text style={styles.itemDetails}>
-            Category: {itemDetails?.category || "N/A"}
+            {t("category")}: {itemDetails?.category || t("na")}
           </Text>
           <Text style={styles.itemDetails}>
-            Total Count:{" "}
+            {t("totalCount")}:{" "}
             {itemDetails?.count +
-              getTotalReservedForItem(itemDetails.id, projects) || "N/A"}
+              getTotalReservedForItem(itemDetails.id, projects) || t("na")}
           </Text>
           <Text style={styles.itemDetails}>
-            Available Count: {itemDetails?.count - reservationCount || "0"}
+            {t("availableCount")}:{" "}
+            {itemDetails?.count - reservationCount || "0"}
           </Text>
           <TouchableOpacity
             style={styles.deleteButton}
             onPress={handleDeleteItem}
           >
-            <Text style={styles.buttonText}>Delete Item</Text>
+            <Text style={styles.buttonText}>{t("deleteItem")}</Text>
           </TouchableOpacity>
 
           {getProjectReservations().length > 0 && (
             <View style={styles.reservationsContainer}>
-              <Text style={styles.reservationsTitle}>Reserved By:</Text>
+              <Text style={styles.reservationsTitle}>{t("reservedBy")}:</Text>
               {getProjectReservations().map((reservation) => (
                 <View
                   key={reservation.projectId}
                   style={styles.reservationItem}
                 >
                   <Text style={styles.reservationText}>
-                    {reservation.projectTitle}: {reservation.count} items
+                    {reservation.projectTitle}: {reservation.count} {t("items")}
                   </Text>
                   <TouchableOpacity
                     style={styles.clearReservationButton}
                     onPress={() => {
-                      //setReservationCount(reservation.count);
                       handleClearProjectReservation(reservation.projectId);
                     }}
                   >
-                    <Text style={styles.clearReservationText}>Clear</Text>
+                    <Text style={styles.clearReservationText}>
+                      {t("clear")}
+                    </Text>
                   </TouchableOpacity>
                 </View>
               ))}
@@ -452,21 +419,18 @@ const WarehouseItemInfo = () => {
           )}
         </View>
 
-        <Text style={styles.sectionTitle}>Item Description</Text>
+        <Text style={styles.sectionTitle}>{t("itemDescription")}</Text>
         <Text style={styles.descriptionText}>
-          {itemDetails?.description || "No description available"}
+          {itemDetails?.description || t("noDescriptionAvailable")}
         </Text>
 
-        {/* Photos Section */}
         <View style={styles.photosSectionHeader}>
-          <Text style={styles.sectionTitle}>Photos</Text>
+          <Text style={styles.sectionTitle}>{t("photos")}</Text>
           <TouchableOpacity
             style={styles.addPhotoButton}
-            onPress={() =>
-              Alert.alert("Info", "Add photos functionality coming soon")
-            }
+            onPress={() => Alert.alert(t("info"), t("addPhotosComingSoon"))}
           >
-            <Text style={styles.buttonText}>Add Photos</Text>
+            <Text style={styles.buttonText}>{t("addPhotos")}</Text>
           </TouchableOpacity>
         </View>
 
@@ -484,7 +448,7 @@ const WarehouseItemInfo = () => {
               </View>
             ))
           ) : (
-            <Text style={styles.noPhotosText}>No photos available</Text>
+            <Text style={styles.noPhotosText}>{t("noPhotosAvailable")}</Text>
           )}
         </View>
 
@@ -511,26 +475,24 @@ const WarehouseItemInfo = () => {
           </Modal>
         )}
 
-        {/* Action Buttons */}
         <View style={styles.buttonRow}>
           <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
-            <Text style={styles.buttonText}>Go Back</Text>
+            <Text style={styles.buttonText}>{t("goBack")}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.editButton}>
-            <Text style={styles.buttonText}>Edit Info</Text>
+            <Text style={styles.buttonText}>{t("editInfo")}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.editButton}
             onPress={() => setShowReserveSection(!showReserveSection)}
           >
-            <Text style={styles.buttonText}>Reserve Item</Text>
+            <Text style={styles.buttonText}>{t("reserveItem")}</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Reserve Section */}
         {showReserveSection && (
           <View style={styles.reserveSection}>
-            <Text style={styles.reserveTitle}>Select Project</Text>
+            <Text style={styles.reserveTitle}>{t("selectProject")}</Text>
             <View style={styles.projectsContainer}>
               {projects.map((project) => (
                 <TouchableOpacity
@@ -555,10 +517,10 @@ const WarehouseItemInfo = () => {
               ))}
             </View>
 
-            <Text style={styles.reserveTitle}>Enter Quantity</Text>
+            <Text style={styles.reserveTitle}>{t("enterQuantity")}</Text>
             <TextInput
               style={styles.quantityInput}
-              placeholder="Enter quantity to reserve"
+              placeholder={t("enterQuantityToReserve")}
               value={reservedCount}
               onChangeText={setReservedCount}
               keyboardType="numeric"
@@ -569,12 +531,12 @@ const WarehouseItemInfo = () => {
                 style={styles.saveButton}
                 onPress={handleReserveItem}
               >
-                <Text style={styles.buttonText}>Save Reservation</Text>
+                <Text style={styles.buttonText}>{t("saveReservation")}</Text>
               </TouchableOpacity>
             ) : (
               <View style={styles.saveButtonDisabled}>
                 <Text style={styles.buttonTextDisabled}>
-                  Select project and enter quantity
+                  {t("selectProjectAndEnterQuantity")}
                 </Text>
               </View>
             )}

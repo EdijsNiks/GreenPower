@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Text, View, StyleSheet, Button } from "react-native";
+import { Text, View, StyleSheet } from "react-native";
 import { CameraView, Camera } from "expo-camera";
-import { useNavigation } from "@react-navigation/native";
+import { useTranslation } from 'react-i18next';
 
 const QRCodeScanner = ({ onScanComplete, onClose }) => {
   const [hasPermission, setHasPermission] = useState(null);
   const [scanned, setScanned] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     const getCameraPermissions = async () => {
@@ -15,17 +16,18 @@ const QRCodeScanner = ({ onScanComplete, onClose }) => {
 
     getCameraPermissions();
   }, []);
+
   const handleBarcodeScanned = ({ type, data }) => {
     setScanned(true);
-    onScanComplete(data); // Pass scanned data to the Warehouse screen
-    onClose(); // Close the QR code scanner screen
+    onScanComplete(data);
+    onClose();
   };
 
   if (hasPermission === null) {
-    return <Text>Requesting for camera permission</Text>;
+    return <Text>{t('requestingPermission')}</Text>;
   }
   if (hasPermission === false) {
-    return <Text>No access to camera</Text>;
+    return <Text>{t('noAccess')}</Text>;
   }
 
   return (
@@ -37,11 +39,9 @@ const QRCodeScanner = ({ onScanComplete, onClose }) => {
         }}
         style={StyleSheet.absoluteFillObject}
       />
-
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

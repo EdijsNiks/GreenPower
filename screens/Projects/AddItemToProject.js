@@ -17,64 +17,42 @@ const { width } = Dimensions.get("window");
 import "react-native-get-random-values"; // Polyfill for random values
 import { v4 as uuidv4 } from "uuid";
 import { Picker } from "@react-native-picker/picker"; // Import picker for dropdown
-import { LinearGradient } from "expo-linear-gradient";
-
+import { useTranslation } from "react-i18next";
 
 const AddItemToProject = () => {
   const navigation = useNavigation();
+  const { t } = useTranslation(); // Initialize translation
 
-  // States for input fields
   const [projectName, setProjectName] = useState("");
   const [description, setDescription] = useState("");
   const [categoryName, setCategoryName] = useState("");
   const [isFinished, setIsFinished] = useState(false);
   const [photos, setPhotos] = useState([]);
   const [reserved, setReserved] = useState([]);
-  const [categories, setCategories] = useState([]); // State to store fetched categories
-
-
-  const generateUniqueId = () => uuidv4();
+  const [categories, setCategories] = useState([]);
 
   useEffect(() => {
-   //saveDefaultCategories(); // Save default categories on mount
-      fetchCategories(); // Fetch categories from AsyncStorage on mount
-    }, []);
+    fetchCategories();
+  }, []);
 
-    // Fetch categories from AsyncStorage
-    const fetchCategories = async () => {
-      try {
-        const storedCategories = await AsyncStorage.getItem("categoriesProjects");
-        if (storedCategories) {
-          setCategories(JSON.parse(storedCategories));
-        }
-      } catch (error) {
-        console.error("Error fetching categories:", error);
+  const fetchCategories = async () => {
+    try {
+      const storedCategories = await AsyncStorage.getItem("categoriesProjects");
+      if (storedCategories) {
+        setCategories(JSON.parse(storedCategories));
       }
-    };
- /*   const saveDefaultCategories = async () => {
-      const defaultCategories = ["UPS", "Diesel", "METAL", "Masts", "ETC"];
-      try {
-        const storedCategories = await AsyncStorage.getItem("categoriesProjects");
-        if (!storedCategories) {
-          await AsyncStorage.setItem(
-            "categoriesProjects",
-            JSON.stringify(defaultCategories)
-          );
-        }
-      } catch (error) {
-        console.error("Error saving default categories:", error);
-      }
-    };
-*/
-  // Handle Save
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    }
+  };
+
   const handleSaveProject = async () => {
     if (!projectName || !description) {
-      Alert.alert("Error", "Please enter both project name and description.");
+      Alert.alert(t("errorTitle"), t("errorMessage"));
       return;
     }
 
     try {
-      // Process photos to save to file system if needed
       const processedPhotos = await Promise.all(
         photos.map(async (photo) => {
           const localUri = await savePhotoToFileSystem(photo.uri);
@@ -83,13 +61,13 @@ const AddItemToProject = () => {
       );
 
       const newProject = {
-        id: generateUniqueId(),
+        id: uuidv4(),
         name: projectName,
-        description: description,
+        description,
         photos: processedPhotos,
         category: categoryName,
         finished: isFinished,
-        reserved: reserved,
+        reserved,
         dateCreated: new Date().toLocaleString(),
       };
 
@@ -97,15 +75,15 @@ const AddItemToProject = () => {
       const projects = storedProjects ? JSON.parse(storedProjects) : [];
       projects.push(newProject);
       await AsyncStorage.setItem("projects", JSON.stringify(projects));
-      console.log(projects);
-      Alert.alert("Success", "Project saved successfully!", [
+
+      Alert.alert(t("successTitle"), t("successMessage"), [
         {
-          text: "OK",
+          text: t("ok"),
           onPress: () => {
             setProjectName("");
             setDescription("");
             setCategoryName("");
-            setReserved(false);
+            setReserved([]);
             setPhotos([]);
 
             navigation.navigate("Main", {
@@ -117,7 +95,7 @@ const AddItemToProject = () => {
       ]);
     } catch (error) {
       console.error("Error saving project:", error);
-      Alert.alert("Error", "There was an issue saving the project.");
+      Alert.alert(t("errorTitle"), t("saveError"));
     }
   };
 
@@ -125,31 +103,31 @@ const AddItemToProject = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.navbar}>
         <Image source={require("../../assets/logo1.png")} style={styles.logo} />
-        <Text style={styles.screenName}>Add Project</Text>
+        <Text style={styles.screenName}>{t("title")}</Text>
       </View>
 
       <ScrollView>
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Project Name"
+            placeholder={t("projectNamePlaceholder")}
             value={projectName}
             onChangeText={setProjectName}
           />
 
           <TextInput
             style={styles.textArea}
-            placeholder="Description"
+            placeholder={t("descriptionPlaceholder")}
             value={description}
             onChangeText={setDescription}
             multiline
             numberOfLines={4}
-          />         
-           <View style={styles.lineSeparator}></View>
+          />
+          <View style={styles.lineSeparator}></View>
           <View
             style={[
               styles.dropdownContainer,
-              categoryName && { borderColor: "green" }, // Apply green border if category is selected
+              categoryName && { borderColor: "green" },
             ]}
           >
             <Picker
@@ -157,7 +135,7 @@ const AddItemToProject = () => {
               onValueChange={(value) => setCategoryName(value)}
               style={styles.dropdown}
             >
-              <Picker.Item label="Select a Category - >" value="" />
+              <Picker.Item label={t("selectCategory")} value="" />
               {categories.map((cat) => (
                 <Picker.Item key={cat} label={cat} value={cat} />
               ))}
@@ -178,13 +156,13 @@ const AddItemToProject = () => {
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.buttonText}>Go Back</Text>
+            <Text style={styles.buttonText}>{t("goBack")}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.saveButton}
             onPress={handleSaveProject}
           >
-            <Text style={styles.buttonText}>Save Project</Text>
+            <Text style={styles.buttonText}>{t("saveProject")}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

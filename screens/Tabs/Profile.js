@@ -11,11 +11,15 @@ import React, { useLayoutEffect, useState, useEffect, useContext } from "react";
 import { useNavigation, useIsFocused } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {AuthContext} from "../../AuthContext";
+import { useTranslation } from "react-i18next";
+import i18next, { languageResources } from "../../services/i18next";
 
 const { width } = Dimensions.get("window");
 
 const Profile = () => {
   const navigation = useNavigation();
+  const { t } = useTranslation();
+
   const isFocused = useIsFocused();
   const [currentUser, setCurrentUser] = useState(null);
   const [isCheckedIn, setIsCheckedIn] = useState(true);
@@ -67,7 +71,7 @@ const Profile = () => {
       {/*///////// Navbar //////////*/}
       <View style={styles.navbar}>
         <Image source={require("../../assets/logo1.png")} style={styles.logo} />
-        <Text style={styles.screenName}>PROFILE</Text>
+        <Text style={styles.screenName}>{t("profile")}</Text>
       </View>
 
       {/*///////// Profile Container //////////*/}
@@ -78,14 +82,14 @@ const Profile = () => {
 
             {/* Check-in Status */}
             <View style={styles.checkInContainer}>
-              <Text style={styles.checkInLabel}>Checked In:</Text>
+              <Text style={styles.checkInLabel}>{t("checkin")}</Text>
               <Text
                 style={[
                   styles.checkInStatus,
                   { color: currentUser.checkedIn ? "green" : "red" },
                 ]}
               >
-                {currentUser.checkedIn ? "Yes" : "No"}
+                {currentUser.checkedIn ? t("yes") : t("no")}
               </Text>
             </View>
 
@@ -101,19 +105,19 @@ const Profile = () => {
                   { backgroundColor: isPressed ? "#A4D337" : "#7CB518" },
                 ]}
               >
-                <Text style={styles.logoutButtonText}>Logout</Text>
+                <Text style={styles.logoutButtonText}>{t("logout")}</Text>
               </View>
             </Pressable>
 
             {/* Admin Button */}
             {isAdmin && (
               <Pressable onPress={handleAdminPage} style={styles.adminButton}>
-                <Text style={styles.adminButtonText}>Admin Page</Text>
+                <Text style={styles.adminButtonText}>{t("admin")}</Text>
               </Pressable>
             )}
           </>
         ) : (
-          <Text style={styles.profileText}>Loading...</Text>
+          <Text style={styles.profileText}>{t("loading")}</Text>
         )}
       </View>
     </SafeAreaView>

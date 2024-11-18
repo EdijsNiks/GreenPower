@@ -11,11 +11,15 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import CustomAlert from "../../components/CheckInComp/CustomAlert";
+import { useTranslation } from "react-i18next";
+import i18next, { languageResources } from "../../services/i18next";
 
 const { width } = Dimensions.get("window");
 
 const CheckIn = () => {
   const navigation = useNavigation();
+  const { t } = useTranslation();
+
   const [profile, setProfile] = useState(null);
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
@@ -77,7 +81,7 @@ const CheckIn = () => {
   const handleCheckIn = async () => {
     if (profile && profile.checkedIn) {
       // Show confirmation before checking out
-      setAlertMessage("Do you really want to check out?");
+      setAlertMessage(t("reallyWantToCheckOut"));
       setShowConfirm(true);
       setAlertVisible(true);
     } else {
@@ -88,7 +92,7 @@ const CheckIn = () => {
         checkedInTime: now.toISOString(),
       };
       await saveProfileData(updatedProfile);
-      setAlertMessage("Check-In Successful");
+      setAlertMessage(t("checkIn"));
       setShowConfirm(false);
       setAlertVisible(true);
     }
@@ -112,11 +116,11 @@ const CheckIn = () => {
       const checkInFormatted = formatDateTime(new Date(profile.checkedInTime));
       const checkOutFormatted = formatDateTime(now);
 
-      setAlertMessage(
-        `You have checked out.\n\nStart: ${checkInFormatted}\nEnd: ${checkOutFormatted}\nTime spent: ${timeSpent.toFixed(
-          2
-        )} minutes.`
-      );
+      setAlertMessage(  t('checkoutMessage', {
+        startTime: checkInFormatted,
+        endTime: checkOutFormatted,
+        timeSpent: timeSpent.toFixed(2),
+      }));
       setShowConfirm(false);
       setAlertVisible(true);
     }
@@ -164,10 +168,10 @@ const CheckIn = () => {
             source={require("../../assets/logo1.png")}
             style={styles.logo}
           />
-          <Text style={styles.screenName}>CHECKIN</Text>
+          <Text style={styles.screenName}>{t("checkinTitle")}</Text>
         </View>
         <View style={styles.profileContainer}>
-          <Text style={styles.profileText}>Loading...</Text>
+          <Text style={styles.profileText}>{t("loading")}</Text>
         </View>
       </SafeAreaView>
     );
@@ -177,12 +181,12 @@ const CheckIn = () => {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.navbar}>
         <Image source={require("../../assets/logo1.png")} style={styles.logo} />
-        <Text style={styles.screenName}>CHECKIN</Text>
+        <Text style={styles.screenName}>{t("checkinTitle")}</Text>
       </View>
 
       <View style={styles.profileContainer}>
         <Text style={styles.profileText}>{profile.name}</Text>
-        <Text style={styles.checkInText}>Check in to work</Text>
+        <Text style={styles.checkInText}>{t("checkInToWork")}</Text>
 
         <TouchableOpacity
           style={
@@ -191,7 +195,7 @@ const CheckIn = () => {
           onPress={handleCheckIn}
         >
           <Text style={styles.buttonText}>
-            {profile.checkedIn ? "Press to check out" : "Press to check in"}
+            {profile.checkedIn ? t("pressToCheckOut") : t("pressToCheckIn")}
           </Text>
         </TouchableOpacity>
       </View>

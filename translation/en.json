@@ -1,0 +1,35 @@
+{
+    "place-holder-email": "Email",
+    "password": "Password",
+    "Hide": "Hide",
+    "Show": "Show",
+    "forgotPassword": "Forgot Password?",
+    "login": "Login",
+    "notAccount": "Not have an account?",
+    "pressHere": "Press Here",
+    "loginSuccess": "Login successful!",
+    "invalidEmailorPass": "Invalid email or password.",
+    "failedToCheck": "Failed to check user profile. Please try again.",
+
+    "allFields": "All fields are required.",
+    "invalidEmail": "Invalid email format. Please enter a valid email.",
+    "passwordMatch": "Password must be at least 5 characters long and contain at least one number.",
+    "passwordNotMatch": "Passwords do not match.",
+    "enterFields": "Please enter all required fields.",
+    "noUserProfile": "No user profile found.",
+    "registerSuccess": "Registration completed!",
+    "failedSave": "Failed to save user profile. Please try again.",
+    "name-placeholder": "Name",
+    "confirmPass": "Confirm Password",
+    "register": "Register",
+    "haveAccount": "Have an account?",
+    
+    "reallyWantToCheckOut": "Do you really want to check out?",
+    "checkIn": "Check-In Successful",
+
+    "checkoutMessage": "You have checked out.\n\nStart: {{startTime}}\nEnd: {{endTime}}\nTime spent: {{timeSpent}} minutes.",
+    "checkinTitle": "CHECK IN",
+    "checkInTowork": "Check in to work",
+    "pressToCheckOut": "Press to check out"
+   
+  }

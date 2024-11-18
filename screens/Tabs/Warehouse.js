@@ -20,9 +20,13 @@ import Pagination from "../../components/Pagination";
 import QRCodeScanner from "../../components/QRCodeScanner";
 import styles from "../../styles/WarehouseStyles.js";
 import WarehouseSpots from "../../components/WarehouseSpots.js";
+import { useTranslation } from "react-i18next";
+import i18next, { languageResources } from "../../services/i18next";
 
 const Warehouse = ({ route }) => {
   const navigation = useNavigation();
+  const { t } = useTranslation();
+
   const [currentUser, setCurrentUser] = useState("");
   const [taskList, setTaskList] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -92,7 +96,7 @@ const Warehouse = ({ route }) => {
       //Alert.alert('Success', 'Spot updated successfully');
     } catch (error) {
       console.error('Error updating spot:', error);
-      Alert.alert('Error', 'Failed to update spot');
+      Alert.alert('Error', t("failedToUpdate"));
     }
   }, [savedData]);
   const handleModalClose = (updatedItems) => {
@@ -213,7 +217,7 @@ const Warehouse = ({ route }) => {
       >
         <View style={[styles.taskItem, { backgroundColor }]}>
           <Text style={styles.taskTitle}>{item.name}</Text>
-          <Text>Count: {item.count}</Text>
+          <Text>{t("count")}: {item.count}</Text>
         </View>
       </TouchableOpacity>
     );
@@ -229,7 +233,7 @@ const Warehouse = ({ route }) => {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.navbar}>
         <Image source={require("../../assets/logo1.png")} style={styles.logo} />
-        <Text style={styles.screenName}>WAREHOUSE</Text>
+        <Text style={styles.screenName}>{t("warehouse")}</Text>
       </View>
 
       <View style={styles.profileContainer}>
@@ -245,7 +249,7 @@ const Warehouse = ({ route }) => {
         </TouchableOpacity>
         <TextInput
           style={styles.searchBar}
-          placeholder="Search Warehouse Item"
+          placeholder={t("searchWarehouse")}
           value={searchQuery}
           onChangeText={handleSearch}
         />
@@ -256,19 +260,19 @@ const Warehouse = ({ route }) => {
           style={styles.addButton}
           onPress={() => setShowScanner(true)}
         >
-          <Text style={styles.addButtonText}>QRCode Scanner</Text>
+          <Text style={styles.addButtonText}>{t("qrcode")}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => navigation.navigate("AddItemToWarehouse")}
         >
-          <Text style={styles.addButtonText}>Add Item</Text>
+          <Text style={styles.addButtonText}>{t("addItem")}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => navigation.navigate("AddSpotToWarehouse")}
         >
-          <Text style={styles.addButtonText}>+ Spot</Text>
+          <Text style={styles.addButtonText}>{t("plusSpot")}</Text>
         </TouchableOpacity>
       </View>
 
@@ -279,13 +283,13 @@ const Warehouse = ({ route }) => {
       >
         {hasPermission === null ? (
           <View style={styles.cameraContainer}>
-            <Text>Requesting camera permission...</Text>
+            <Text>{t("reqCamera")}</Text>
           </View>
         ) : hasPermission === false ? (
           <View style={styles.cameraContainer}>
-            <Text>Camera permission denied</Text>
+            <Text>{t("camDenied")}</Text>
             <Button
-              title="Grant Permission"
+              title={t("grantPerm")}
               onPress={() => Camera.constants.requestCameraPermissionsAsync()}
             />
           </View>

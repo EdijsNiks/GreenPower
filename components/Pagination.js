@@ -1,17 +1,21 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useTranslation } from "react-i18next";
+
 
 const Pagination = ({ currentPage, totalPages, onPrev, onNext }) => {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.pagination}>
       <TouchableOpacity disabled={currentPage === 1} onPress={onPrev}>
-        <Text style={styles.pageButton}>Prev</Text>
+        <Text style={styles.pageButton}>{t("prev")}</Text>
       </TouchableOpacity>
       <Text style={styles.pageNumber}>
-        Page {currentPage} of {totalPages}
+        {t("page")} {currentPage} {t("of")} {totalPages}
       </Text>
       <TouchableOpacity disabled={currentPage === totalPages} onPress={onNext}>
-        <Text style={styles.pageButton}>Next</Text>
+        <Text style={styles.pageButton}>{t("next")}</Text>
       </TouchableOpacity>
     </View>
   );

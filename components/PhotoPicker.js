@@ -9,9 +9,11 @@ import {
   Modal,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { useTranslation } from "react-i18next"; // Import translation hook
 
 const PhotoPicker = ({ photos, onPhotosChange, containerStyle }) => {
   const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const { t } = useTranslation(); // Initialize translation hook
 
   const requestPermissions = async (source) => {
     let permissionResult;
@@ -24,10 +26,10 @@ const PhotoPicker = ({ photos, onPhotosChange, containerStyle }) => {
 
     if (!permissionResult.granted) {
       Alert.alert(
-        "Permission Required",
-        `Please enable permissions for ${
-          source === "camera" ? "camera" : "gallery"
-        } in your device settings.`
+        t("permissionTitle"),
+        t("permissionMessage", {
+          source: source === "camera" ? t("camera") : t("gallery"),
+        })
       );
       return false;
     }
@@ -70,18 +72,18 @@ const PhotoPicker = ({ photos, onPhotosChange, containerStyle }) => {
       }
     } catch (error) {
       console.error("Error picking image:", error);
-      Alert.alert("Error", "Could not process the image. Please try again.");
+      Alert.alert(t("errorTitle"), t("errorMessage"));
     }
   };
 
   const handleAddPhoto = () => {
     Alert.alert(
-      "Add Photo",
-      "Choose an option",
+      t("addPhotoTitle"),
+      t("addPhotoMessage"),
       [
-        { text: "Take Photo", onPress: () => pickImage("camera") },
-        { text: "Choose from Library", onPress: () => pickImage("gallery") },
-        { text: "Cancel", style: "cancel" },
+        { text: t("takePhoto"), onPress: () => pickImage("camera") },
+        { text: t("chooseLibrary"), onPress: () => pickImage("gallery") },
+        { text: t("cancel"), style: "cancel" },
       ],
       { cancelable: true }
     );
@@ -90,9 +92,9 @@ const PhotoPicker = ({ photos, onPhotosChange, containerStyle }) => {
   return (
     <View style={[styles.container, containerStyle]}>
       <View style={styles.photoRow}>
-        <Text style={styles.photosTitle}>PHOTOS</Text>
+        <Text style={styles.photosTitle}>{t("photosTitle")}</Text>
         <TouchableOpacity style={styles.addPhotoButton} onPress={handleAddPhoto}>
-          <Text style={styles.buttonText}>Add Photo</Text>
+          <Text style={styles.buttonText}>{t("addPhoto")}</Text>
         </TouchableOpacity>
       </View>
 
@@ -133,7 +135,6 @@ const PhotoPicker = ({ photos, onPhotosChange, containerStyle }) => {
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     padding: 16,

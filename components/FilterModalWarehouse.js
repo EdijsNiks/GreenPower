@@ -1,6 +1,8 @@
 import React from "react";
 import { View, Text, TouchableOpacity, Modal, StyleSheet } from "react-native";
 
+import { useTranslation } from "react-i18next"; // Import translation hook
+
 const FilterModalWarehouse = ({
   isVisible,
   onClose,
@@ -9,11 +11,14 @@ const FilterModalWarehouse = ({
   clearSelection,
   categories = [], // Accept categories as a prop with a default empty array
 }) => {
+  const { t } = useTranslation(); // Initialize translation
+
   return (
     <Modal visible={isVisible} transparent={true} animationType="slide">
       <View style={styles.modalContainer}>
         <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Select Category</Text>
+          {/* Translate the modal title */}
+          <Text style={styles.modalTitle}>{t('selectCategory')}</Text>
 
           {/* Map through the categories prop instead of a hardcoded array */}
           {categories.map((category) => (
@@ -33,13 +38,13 @@ const FilterModalWarehouse = ({
             </View>
           ))}
 
-          {/* Clear and Close buttons in the same row */}
+          {/* Translate the button text for "Clear Selection" and "Close" */}
           <View style={styles.buttonRow}>
             <TouchableOpacity style={styles.clearButton} onPress={clearSelection}>
-              <Text style={styles.clearButtonText}>Clear Selection</Text>
+              <Text style={styles.clearButtonText}>{t('clearSelection')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <Text style={styles.closeButtonText}>Close</Text>
+              <Text style={styles.closeButtonText}>{t('close')}</Text>
             </TouchableOpacity>
           </View>
         </View>

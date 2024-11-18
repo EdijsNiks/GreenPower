@@ -11,10 +11,12 @@ import {
   Dimensions,
   Alert,
 } from "react-native";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useTranslation } from "react-i18next";
+import i18next, { languageResources } from "../../services/i18next";
 
 const Registration = () => {
   const [name, setName] = useState("");
@@ -28,8 +30,41 @@ const Registration = () => {
   const [checkedInTime, setCheckedInTime] = useState(null);
   const navigation = useNavigation();
   const { width, height } = Dimensions.get("window");
+  const { t } = useTranslation();
+
 
   const togglePasswordVisibility = () => setPasswordVisible(!passwordVisible);
+
+  const changeLng = (lng) => {
+    i18next.changeLanguage(lng);
+  };
+  useEffect(() => {
+    initializeLanguage();
+  }, []);
+  // Function to change and persist language
+  const changeLanguage = async (lng) => {
+    try {
+      await AsyncStorage.setItem("language", lng); // Save the selected language
+      changeLng(lng); // Apply the language
+    } catch (error) {
+      console.error("Error saving language preference:", error);
+    }
+  };
+
+  // Initialize language from AsyncStorage
+  const initializeLanguage = async () => {
+    try {
+      const savedLanguage = await AsyncStorage.getItem("language");
+      if (savedLanguage) {
+        changeLng(savedLanguage); // Apply saved language
+      } else {
+        const defaultLanguage = "en"; // Set a default language
+        changeLng(defaultLanguage);
+      }
+    } catch (error) {
+      console.error("Error initializing language preference:", error);
+    }
+  };
 
   const validateEmail = (email) => {
     // Ensure email has an "@" symbol and is at least 5 characters long
@@ -45,22 +80,22 @@ const Registration = () => {
 
   const validateFields = () => {
     if (!name || !email || !password || !confirmPassword) {
-      Alert.alert("Error", "All fields are required.");
+      Alert.alert("Error", t("allFields"));
       return false;
     }
     if (!validateEmail(email)) {
-      Alert.alert("Error", "Invalid email format. Please enter a valid email.");
+      Alert.alert("Error", t("invalidEmail"));
       return false;
     }
     if (!validatePassword(password)) {
       Alert.alert(
         "Error",
-        "Password must be at least 5 characters long and contain at least one number."
+        t("passwordMatch")
       );
       return false;
     }
     if (password !== confirmPassword) {
-      Alert.alert("Error", "Passwords do not match.");
+      Alert.alert("Error", t("passwordNotMatch"));
       return false;
     }
     return true;
@@ -79,7 +114,7 @@ const Registration = () => {
 
       try {
         await AsyncStorage.setItem("profile", JSON.stringify(userProfile));
-        Alert.alert("Success", "Registration completed!", [], {
+        Alert.alert("Success", t("registerSuccess"), [], {
           cancelable: true,
         });
 
@@ -89,7 +124,7 @@ const Registration = () => {
         }, 2000);
       } catch (error) {
         console.error("Error saving user profile:", error);
-        Alert.alert("Error", "Failed to save user profile. Please try again.");
+        Alert.alert("Error", t("failedSave"));
       }
     }
   };
@@ -112,7 +147,7 @@ const Registration = () => {
             value={name}
             onChangeText={(text) => setName(text)}
             style={styles.input}
-            placeholder="Name"
+            placeholder={t("name-placeholder")}
           />
         </View>
 
@@ -122,7 +157,7 @@ const Registration = () => {
             value={email}
             onChangeText={(text) => setEmail(text)}
             style={styles.input}
-            placeholder="Email Address"
+            placeholder={t("place-holder-email")}
             keyboardType="email-address"
           />
         </View>
@@ -134,11 +169,11 @@ const Registration = () => {
             onChangeText={(text) => setPassword(text)}
             secureTextEntry={!passwordVisible}
             style={styles.input}
-            placeholder="Password"
+            placeholder={t("password")}
           />
           <TouchableOpacity onPress={togglePasswordVisibility}>
             <Text style={styles.toggleText}>
-              {passwordVisible ? "Hide" : "Show"}
+              {passwordVisible ? t("Hide") : t("Show")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -150,11 +185,11 @@ const Registration = () => {
             onChangeText={(text) => setConfirmPassword(text)}
             secureTextEntry={!passwordVisible}
             style={styles.input}
-            placeholder="Confirm Password"
+            placeholder={t("confirmPass")}
           />
           <TouchableOpacity onPress={togglePasswordVisibility}>
             <Text style={styles.toggleText}>
-              {passwordVisible ? "Hide" : "Show"}
+              {passwordVisible ? t("Hide") : t("Show")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -169,19 +204,19 @@ const Registration = () => {
             colors={isPressed ? ["#A4D337", "#A4D337"] : ["#A4D337", "#7CB518"]}
             style={styles.loginButton}
           >
-            <Text style={styles.loginButtonText}>Register</Text>
+            <Text style={styles.loginButtonText}>{t("register")}</Text>
           </LinearGradient>
         </Pressable>
 
         {/* Registration Prompt */}
         <View style={styles.registrationContainer}>
           <Text style={styles.registrationText}>
-            Have an account?{" "}
+            {t("haveAccount")}{" "}
             <Text
               style={styles.registrationLink}
               onPress={() => navigation.navigate("Login")}
             >
-              Press Here
+              {t("pressHere")}
             </Text>
           </Text>
         </View>
@@ -191,21 +226,21 @@ const Registration = () => {
           <View style={styles.languageButtons}>
             <TouchableOpacity
               style={styles.languageButton}
-              onPress={() => console.log("Latvian selected")}
+              onPress={() => changeLanguage("lv")}
             >
-              <Text style={styles.languageButtonText}>Latvian</Text>
+              <Text style={styles.languageButtonText}>Latviešu</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.languageButton}
-              onPress={() => console.log("English selected")}
+              onPress={() => changeLanguage("en")}
             >
               <Text style={styles.languageButtonText}>English</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.languageButton}
-              onPress={() => console.log("Russian selected")}
+              onPress={() => changeLanguage("rus")}
             >
-              <Text style={styles.languageButtonText}>Russian</Text>
+              <Text style={styles.languageButtonText}>Россия</Text>
             </TouchableOpacity>
           </View>
         </View>

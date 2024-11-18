@@ -12,8 +12,10 @@ import {
   Button,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useTranslation } from "react-i18next";
 
 const WarehouseSpots = ({ isVisible, spotId, onClose, onSave }) => {
+  const { t } = useTranslation();
   const [spotData, setSpotData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -282,11 +284,11 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, onSave }) => {
   const ItemSelector = () => (
     <Modal visible={showItemSelector} animationType="slide" transparent>
       <View style={styles.selectorContainer}>
-        <Text style={styles.modalTitle}>Select Item</Text>
+        <Text style={styles.modalTitle}>{t("select_item")}</Text>
 
         <TextInput
           style={styles.searchInput}
-          placeholder="Search items..."
+          placeholder={t("search_items")}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
@@ -301,11 +303,11 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, onSave }) => {
             >
               <Text style={styles.itemText}>{item.name}</Text>
               <Text style={styles.itemDescription}>{item.description}</Text>
-              <Text style={styles.count}>Count: {item.count}</Text>
+              <Text style={styles.count}>{t("count", { count: item.count })}</Text>
             </TouchableOpacity>
           )}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No items available</Text>
+            <Text style={styles.emptyText}>{t("no_items_available")}</Text>
           }
         />
 
@@ -316,7 +318,7 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, onSave }) => {
             setSearchQuery("");
           }}
         >
-          <Text style={styles.buttonText}>Close</Text>
+          <Text style={styles.buttonText}>{t("close")}</Text>
         </TouchableOpacity>
       </View>
     </Modal>
@@ -326,7 +328,7 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, onSave }) => {
     <View style={styles.itemContainer}>
       <TouchableOpacity style={styles.itemInfo}>
         <Text style={styles.itemText}>{item.name}</Text>
-        <Text style={styles.count}>Count: {item.count}</Text>
+        <Text style={styles.count}>{t("count")}: {item.count}</Text>
       </TouchableOpacity>
 
       <View style={styles.countControls}>
@@ -339,7 +341,7 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, onSave }) => {
         />
         <Button
           style={styles.saveButtonCount}
-          title="Save"
+          title={t("save")}
           onPress={() => saveInput(item.id, localInputs[item.id])}
         />
       </View>
@@ -348,7 +350,7 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, onSave }) => {
         style={styles.button}
         onPress={() => handleRemoveItem(item.id)}
       >
-        <Text style={styles.buttonText}>Remove</Text>
+        <Text style={styles.buttonText}>{t("remove")}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -359,7 +361,7 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, onSave }) => {
         <View style={styles.modalContainer}>
           <ActivityIndicator size="large" color="#0000ff" />
           <Text style={styles.loadingText}>
-            {saving ? "Saving changes..." : "Loading..."}
+            {saving ? t("saving_changes") : t("loading")}
           </Text>
         </View>
       </Modal>
@@ -367,47 +369,47 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, onSave }) => {
   }
 
   return (
-    <Modal visible={isVisible} animationType="slide" transparent>
-      <View style={styles.modalContainer}>
-        <Text style={styles.modalTitle}>
-          Warehouse Spot: {spotData?.spotId || "Unknown"}
-        </Text>
-        <Text style={styles.modalSubtitle}>
-          {spotData?.description || "No description available"}
-        </Text>
-
-        <Text style={styles.sectionTitle}>Items in Spot</Text>
-
-        <FlatList
-          data={spotItems}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={renderSpotItem}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>No items in this spot</Text>
-          }
-        />
-
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => setShowItemSelector(true)}
-        >
-          <Text style={styles.buttonText}>Add Item</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.closeButton, hasChanges && styles.saveButton]}
-          onPress={handleSaveAndClose}
-        >
-          <Text style={styles.buttonText}>
-            {hasChanges ? "Save & Close" : "Close"}
+      <Modal visible={isVisible} animationType="slide" transparent>
+        <View style={styles.modalContainer}>
+          <Text style={styles.modalTitle}>
+            {t("items_in_spot")}: {spotData?.spotId || t("spot_unknown")}
           </Text>
-        </TouchableOpacity>
-
-        <ItemSelector />
-      </View>
-    </Modal>
-  );
-};
+          <Text style={styles.modalSubtitle}>
+            {spotData?.description || t("spot_no_description")}
+          </Text>
+  
+          <Text style={styles.sectionTitle}>{t("items_in_spot")}</Text>
+  
+          <FlatList
+            data={spotItems}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={renderSpotItem}
+            ListEmptyComponent={
+              <Text style={styles.emptyText}>{t("no_items_in_spot")}</Text>
+            }
+          />
+  
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => setShowItemSelector(true)}
+          >
+            <Text style={styles.buttonText}>{t("add_item")}</Text>
+          </TouchableOpacity>
+  
+          <TouchableOpacity
+            style={[styles.closeButton, hasChanges && styles.saveButton]}
+            onPress={handleSaveAndClose}
+          >
+            <Text style={styles.buttonText}>
+              {hasChanges ? t("save_close") : t("close")}
+            </Text>
+          </TouchableOpacity>
+  
+          <ItemSelector />
+        </View>
+      </Modal>
+    );
+  };
 
 const styles = StyleSheet.create({
   modalContainer: {

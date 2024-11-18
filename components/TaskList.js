@@ -1,11 +1,15 @@
 import React from 'react';
 import { FlatList, TouchableOpacity, View, Text, StyleSheet } from 'react-native';
 
+import { useTranslation } from "react-i18next";
+
 const TaskList = ({ tasks, navigation }) => {
+  const { t } = useTranslation(); // Use translation hook
+
   const renderTaskItem = ({ item }) => (
     <TouchableOpacity
       onPress={() =>
-        navigation.navigate('WarehouseItemInfo', { taskId: item.id })
+        navigation.navigate("WarehouseItemInfo", { taskId: item.id })
       }
     >
       <View style={styles.taskItem}>
@@ -14,7 +18,7 @@ const TaskList = ({ tasks, navigation }) => {
           <Text style={styles.taskTitle}>{item.title}</Text>
         </View>
         <View style={styles.taskRight}>
-          <Text>Count: 10</Text>
+          <Text>{t("count")}: 10</Text> {/* Translate "Count" */}
         </View>
       </View>
     </TouchableOpacity>

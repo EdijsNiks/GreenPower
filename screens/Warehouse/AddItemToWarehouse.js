@@ -17,11 +17,15 @@ import * as FileSystem from "expo-file-system";
 import PhotoPicker from "../../components/PhotoPicker";
 import { v4 as uuidv4 } from "uuid";
 import { Picker } from "@react-native-picker/picker"; // Import picker for dropdown
+import { useTranslation } from "react-i18next";
+
 
 const { width } = Dimensions.get("window");
 
 const AddItemToWarehouse = () => {
   const navigation = useNavigation();
+  const { t } = useTranslation();
+
   const [itemName, setItemName] = useState("");
   const [description, setDescription] = useState("");
   const [count, setCount] = useState("");
@@ -88,7 +92,7 @@ const AddItemToWarehouse = () => {
 
   const handleSaveItem = async () => {
     if (!itemName || !description || !count || !category) {
-      Alert.alert("Error", "Please enter all required fields.");
+      Alert.alert(t('error'), t('missingFields'));
       return;
     }
 
@@ -116,7 +120,7 @@ const AddItemToWarehouse = () => {
       items.push(newItem);
       await AsyncStorage.setItem("items", JSON.stringify(items));
 
-      Alert.alert("Success", "Item saved successfully!", [
+      Alert.alert(t('success'), t('itemSaved'), [
         {
           text: "OK",
           onPress: () => {
@@ -135,7 +139,7 @@ const AddItemToWarehouse = () => {
       ]);
     } catch (error) {
       console.error("Error saving item:", error);
-      Alert.alert("Error", "There was an issue saving the item.");
+      Alert.alert(t('error'), t('saveError'));
     }
   };
 
@@ -143,20 +147,20 @@ const AddItemToWarehouse = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.navbar}>
         <Image source={require("../../assets/logo1.png")} style={styles.logo} />
-        <Text style={styles.screenName}>Add Item</Text>
+        <Text style={styles.screenName}>{t('addItem')}</Text>
       </View>
 
       <ScrollView>
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Item Name"
+            placeholder={t('itemName')}
             value={itemName}
             onChangeText={setItemName}
           />
           <TextInput
             style={styles.input}
-            placeholder="Description"
+            placeholder={t('description')}
             value={description}
             onChangeText={setDescription}
             multiline
@@ -164,7 +168,7 @@ const AddItemToWarehouse = () => {
           />
           <TextInput
             style={styles.input}
-            placeholder="Count"
+            placeholder={t('count')}
             value={count}
             onChangeText={setCount}
             keyboardType="numeric"
@@ -180,7 +184,7 @@ const AddItemToWarehouse = () => {
               onValueChange={(value) => setCategory(value)}
               style={styles.dropdown}
             >
-              <Picker.Item label="Select a Category - >" value="" />
+              <Picker.Item label={t('selectCategory')} value="" />
               {categories.map((cat) => (
                 <Picker.Item key={cat} label={cat} value={cat} />
               ))}
@@ -198,10 +202,10 @@ const AddItemToWarehouse = () => {
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.buttonText}>Go Back</Text>
+            <Text style={styles.buttonText}>{t('goBack')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.saveButton} onPress={handleSaveItem}>
-            <Text style={styles.buttonText}>Save Item</Text>
+            <Text style={styles.buttonText}>{t('saveItem')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

@@ -9,6 +9,7 @@ import {
   TextInput,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useTranslation } from "react-i18next";
 
 const ReservedItemsModal = ({
   visible,
@@ -20,6 +21,7 @@ const ReservedItemsModal = ({
   const [reservedItems, setReservedItems] = useState([]);
   const [warehouseItems, setWarehouseItems] = useState([]);
   const [projects, setProjects] = useState([]);
+  const { t } = useTranslation();
 
   // Load warehouse items, projects and reserved items on modal open
   useEffect(() => {
@@ -113,7 +115,7 @@ const loadReservedItems = async () => {
     );
 
     if (isAlreadyReserved) {
-      alert("This item is already reserved for this project.");
+      alert(t("alreadyReserved"));
       return;
     }
 
@@ -250,7 +252,7 @@ const loadReservedItems = async () => {
         }
       >
         <Text style={styles.itemText}>{item.name}</Text>
-        <Text style={styles.countText}>Count: {getItemCount(item)}</Text>
+        <Text style={styles.countText}>{t("count")}: {getItemCount(item)}</Text>
       </TouchableOpacity>
       <View style={styles.countControls}>
         <TouchableOpacity
@@ -267,7 +269,7 @@ const loadReservedItems = async () => {
         </TouchableOpacity>
       </View>
       <TouchableOpacity style={styles.button} onPress={() => onRemove(item.id)}>
-        <Text style={styles.buttonText}>Remove</Text>
+        <Text style={styles.buttonText}>{t("remove")}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -275,7 +277,7 @@ const loadReservedItems = async () => {
   const renderWarehouseItem = ({ item }) => (
     <TouchableOpacity style={styles.warehouseItemInfo} onPress={() => onAdd(item)}>
       <Text style={styles.itemText}>{item.name}</Text>
-      <Text style={styles.availableCount}>Available: {item.count}</Text>
+      <Text style={styles.availableCount}>{t("available")}: {item.count}</Text>
     </TouchableOpacity>
   );
 
@@ -289,7 +291,7 @@ const loadReservedItems = async () => {
     <Modal visible={visible} animationType="slide">
       <View style={styles.modalContainer}>
         <View style={styles.section}>
-          <Text style={styles.modalTitle}>Reserved Items</Text>
+          <Text style={styles.modalTitle}>{t("reservedItems")}</Text>
           <View style={styles.listContainer}>
             <FlatList
               data={reservedItems}
@@ -300,10 +302,10 @@ const loadReservedItems = async () => {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.modalTitle}>Add More Items</Text>
+          <Text style={styles.modalTitle}>{t("addMoreItems")}</Text>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search warehouse items"
+            placeholder={t("searchWarehouseItems")}
             value={searchText}
             onChangeText={setSearchText}
           />
@@ -319,7 +321,7 @@ const loadReservedItems = async () => {
         </View>
 
         <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <Text style={styles.buttonText}>Close</Text>
+          <Text style={styles.buttonText}>{t("close")}</Text>
         </TouchableOpacity>
       </View>
     </Modal>

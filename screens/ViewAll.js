@@ -6,10 +6,12 @@ import { useNavigation } from '@react-navigation/native';
 import { Dimensions } from 'react-native';
 
 const { width } = Dimensions.get('window');
+import { useTranslation } from 'react-i18next';
 
 const ViewAll = ({ route }) => {
   const { type, data } = route.params; // 'users' or 'history'
   const navigation = useNavigation();
+  const { t } = useTranslation();
 
   const [selectedDate, setSelectedDate] = useState('');
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
@@ -24,7 +26,7 @@ const ViewAll = ({ route }) => {
     if (selectedDate && item.date !== selectedDate) return null;
     return (
       <View style={styles.itemBox}>
-        <Text style={styles.listItem}>{item.user} {item.action} {item.description} - {item.date}</Text>
+        <Text style={styles.listItem}> {item.user} {item.action} {item.description} - {item.date}</Text>
       </View>
     );
   };
@@ -33,7 +35,8 @@ const ViewAll = ({ route }) => {
     if (showCheckedInOnly && !item.checkedIn) return null;
     return (
       <View style={styles.itemBox}>
-        <Text style={styles.listItem}>{item.name} - {item.checkedIn ? 'Checked In' : 'Not Checked In'}</Text>
+        <Text style={styles.listItem}>{item.name} - {item.checkedIn ? t('checkedIn')
+          : t('notCheckedIn')}</Text>
       </View>
     );
   };
@@ -43,25 +46,30 @@ const ViewAll = ({ route }) => {
       {/* Navbar */}
       <View style={styles.navbar}>
         <Image source={require("../assets/logo1.png")} style={styles.logo} />
-        <Text style={styles.screenName}>{type === 'users' ? 'ALL USERS' : 'ALL HISTORY'}</Text>
+        <Text style={styles.screenName}>{type === 'users' ? t('allUsers') : t('allHistory')}</Text>
       </View>
 
       {/* Back Button */}
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-        <Text style={styles.buttonText}>Back</Text>
+        <Text style={styles.buttonText}>{t('back')}</Text>
       </TouchableOpacity>
 
       {/* Section Header */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.listTitle}>{type === 'users' ? 'Users' : 'History'}</Text>
+        <Text style={styles.listTitle}>{type === 'users' ? t('users') : t('history')}</Text>
         {type === 'users' && (
           <TouchableOpacity onPress={() => setShowCheckedInOnly(!showCheckedInOnly)} style={styles.viewAllButton}>
-            <Text style={styles.viewAllText}>{showCheckedInOnly ? 'Show All Users' : 'Show Checked-In Only'}</Text>
+            <Text style={styles.viewAllText}>{showCheckedInOnly  ? t('showAllUsers')
+              : t('showCheckedInOnly')}
+              </Text>
           </TouchableOpacity>
         )}
         {type === 'history' && (
           <TouchableOpacity onPress={() => setDatePickerVisibility(true)} style={styles.viewAllButton}>
-            <Text style={styles.viewAllText}>{selectedDate ? `Date: ${selectedDate}` : 'Filter by Date'}</Text>
+            <Text style={styles.viewAllText}>{selectedDate
+              ? t('date', { date: selectedDate })
+              : t('filterByDate')}
+              </Text>
           </TouchableOpacity>
         )}
       </View>

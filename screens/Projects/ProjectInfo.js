@@ -28,6 +28,45 @@ const ProjectsInfo = () => {
   const [photos, setPhotos] = useState([]);
 
   // Save photo to local filesystem
+/*  const handleSavePhoto = async () => {
+    if (photos.length > 0) {
+      try {
+      const processedPhotos = await Promise.all(
+        photos.map(async (photo) => {
+          const localUri = await savePhotoToFileSystem(photo.uri);
+          return { uri: localUri };
+        })
+      );
+      const newItem = {
+        ...project,
+        photos: processedPhotos,
+      };
+        // Save updated project to AsyncStorage
+        try {
+          await AsyncStorage.setItem(
+            `project_${project.id}`,
+            JSON.stringify(newItem)
+          );
+        } catch (error) {
+          console.error("Error updating AsyncStorage:", error);
+        }
+
+        // Update the project object state for real-time updates
+        project.photos = processedPhotos;
+
+        // Clear local photos state and close modal
+        setPhotos([]);
+        setModalVisible(false);
+
+        Alert.alert("Success", "Photos saved successfully!");
+      } catch (error) {
+        console.error("Error saving photos:", error);
+        Alert.alert("Error", "Failed to save photos.");
+      }
+    } else {
+      Alert.alert("No Photos", "Please select some photos before saving.");
+    }
+  };
   const savePhotoToFileSystem = async (uri) => {
     try {
       if (uri.startsWith("file://")) {
@@ -47,7 +86,7 @@ const ProjectsInfo = () => {
       return uri;
     }
   };
-
+*/
   const handleDeleteProject = async () => {
     Alert.alert(
       "Delete Project",
@@ -55,7 +94,7 @@ const ProjectsInfo = () => {
       [
         {
           text: "Cancel",
-          style: "cancel"
+          style: "cancel",
         },
         {
           text: "Delete",
@@ -64,77 +103,53 @@ const ProjectsInfo = () => {
             try {
               // 1. Remove project from AsyncStorage
               await AsyncStorage.removeItem(`project_${project.id}`);
-              
+
               // 2. Update projects list
-              const projectsJson = await AsyncStorage.getItem('projects');
+              const projectsJson = await AsyncStorage.getItem("projects");
               if (projectsJson) {
                 const projects = JSON.parse(projectsJson);
-                const updatedProjects = projects.filter(p => p.id !== project.id);
-                await AsyncStorage.setItem('projects', JSON.stringify(updatedProjects));
+                const updatedProjects = projects.filter(
+                  (p) => p.id !== project.id
+                );
+                await AsyncStorage.setItem(
+                  "projects",
+                  JSON.stringify(updatedProjects)
+                );
               }
 
               // 3. Clean up warehouse items' reserved arrays
-              const warehouseItemsJson = await AsyncStorage.getItem('items');
+              const warehouseItemsJson = await AsyncStorage.getItem("items");
               if (warehouseItemsJson) {
                 const warehouseItems = JSON.parse(warehouseItemsJson);
-                
+
                 // Remove the project ID from all items' reserved arrays
-                const updatedWarehouseItems = warehouseItems.map(item => {
+                const updatedWarehouseItems = warehouseItems.map((item) => {
                   if (item.reserved && Array.isArray(item.reserved)) {
                     return {
                       ...item,
-                      reserved: item.reserved.filter(id => id !== project.id)
+                      reserved: item.reserved.filter((id) => id !== project.id),
                     };
                   }
                   return item;
                 });
 
                 // Save updated warehouse items
-                await AsyncStorage.setItem('items', JSON.stringify(updatedWarehouseItems));
+                await AsyncStorage.setItem(
+                  "items",
+                  JSON.stringify(updatedWarehouseItems)
+                );
               }
-              
+
               // 4. Navigate back to projects screen
               navigation.navigate("Main", { screen: "Projects" });
             } catch (error) {
               console.error("Error deleting project:", error);
               Alert.alert("Error", "Failed to delete project");
             }
-          }
-        }
+          },
+        },
       ]
     );
-  };
-
-  const saveProjectToAsyncStorage = async (updatedProject) => {
-    try {
-      await AsyncStorage.setItem(
-        `project_${updatedProject.id}`,
-        JSON.stringify(updatedProject)
-      );
-    } catch (error) {
-      console.error("Error updating AsyncStorage:", error);
-    }
-  };
-
-  const handleSavePhoto = async () => {
-    if (selectedPhoto) {
-      // Save selected photo to the project object
-      const updatedPhotos = [...project.photos, selectedPhoto];
-      const updatedProject = { ...project, photos: updatedPhotos };
-
-      // Update AsyncStorage with the new project object
-      await saveProjectToAsyncStorage(updatedProject);
-
-      // Update the project object state (for re-rendering)
-      project.photos = updatedPhotos;
-      console.log(project.photos);
-
-      // Close the photo picker modal
-      setModalVisible(false);
-
-      // Clear the selected photo
-      setSelectedPhoto(null);
-    }
   };
 
   // Render project details if project exists
@@ -171,8 +186,8 @@ const ProjectsInfo = () => {
         <View style={styles.projectInfo}>
           <Text style={styles.infoText}>NAME: {project.name}</Text>
           <Text style={styles.infoText}>Category: {project.category}</Text>
-          <Text style={styles.infoText}>Created at: {project.dateCreated}</Text>  
-                  <TouchableOpacity
+          <Text style={styles.infoText}>Created at: {project.dateCreated}</Text>
+          <TouchableOpacity
             style={styles.deleteButton}
             onPress={handleDeleteProject}
           >
@@ -222,7 +237,7 @@ const ProjectsInfo = () => {
             containerStyle={styles.photosSection}
           />
           <View style={styles.photoGallery}>
-            {project.photos.map((photo, index) => (
+            {project.photos?.map((photo, index) => (
               <Image key={index} source={{ uri: photo }} style={styles.photo} />
             ))}
           </View>
@@ -231,7 +246,7 @@ const ProjectsInfo = () => {
               style={styles.saveButton}
               onPress={handleSavePhoto}
             >
-              <Text style={styles.buttonText}>Save Photo</Text>
+              <Text style={styles.buttonText}>Save Photos</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -444,7 +459,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   deleteButton: {
-    backgroundColor: '#FF0000',
+    backgroundColor: "#FF0000",
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 5,

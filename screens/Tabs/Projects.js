@@ -20,11 +20,15 @@ import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import FilterModalWarehouse from "../../components/FilterModalWarehouse";
+import { useTranslation } from "react-i18next";
+import i18next, { languageResources } from "../../services/i18next";
 
 const { width } = Dimensions.get("window");
 
 const Projects = () => {
   const navigation = useNavigation();
+  const { t } = useTranslation();
+
   const [taskList, setTaskList] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredTaskList, setFilteredTaskList] = useState([]);
@@ -143,7 +147,7 @@ const Projects = () => {
       {/* Navbar */}
       <View style={styles.navbar}>
         <Image source={require("../../assets/logo1.png")} style={styles.logo} />
-        <Text style={styles.screenName}>PROJECTS</Text>
+        <Text style={styles.screenName}>{t("Projects")}</Text>
       </View>
 
       {/* Profile Container */}
@@ -161,7 +165,7 @@ const Projects = () => {
         </TouchableOpacity>
         <TextInput
           style={styles.searchBar}
-          placeholder="Search Project"
+          placeholder={t("searchProject")}
           value={searchQuery}
           onChangeText={handleSearch}
         />
@@ -169,7 +173,7 @@ const Projects = () => {
           style={styles.addButton}
           onPress={() => navigation.navigate("AddItemToProject")}
         >
-          <Text style={styles.addButtonText}>Add Project</Text>
+          <Text style={styles.addButtonText}>{t("addProject")}</Text>
         </TouchableOpacity>
       </View>
 
@@ -187,16 +191,16 @@ const Projects = () => {
           disabled={currentPage === 1}
           onPress={() => setCurrentPage((prev) => prev - 1)}
         >
-          <Text style={styles.pageButton}>Prev</Text>
+          <Text style={styles.pageButton}>{t("prev")}</Text>
         </TouchableOpacity>
         <Text style={styles.pageNumber}>
-          Page {currentPage} of {totalPages}
+          {t("page")} {currentPage} {t("of")} {totalPages}
         </Text>
         <TouchableOpacity
           disabled={currentPage === totalPages}
           onPress={() => setCurrentPage((prev) => prev + 1)}
         >
-          <Text style={styles.pageButton}>Next</Text>
+          <Text style={styles.pageButton}>{t("next")}</Text>
         </TouchableOpacity>
       </View>
       {/* Filter Modal */}

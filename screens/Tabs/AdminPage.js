@@ -5,9 +5,13 @@ import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { format } from 'date-fns';
 
 const { width } = Dimensions.get("window");
+import { useTranslation } from "react-i18next";
+
 
 const AdminPage = () => {
   const navigation = useNavigation();
+  const { t } = useTranslation();
+
 
   // Date picker state for history filtering
   const [selectedDate, setSelectedDate] = useState('');
@@ -61,62 +65,64 @@ const AdminPage = () => {
     return (
       <View style={styles.itemBox}>
         <Text style={styles.listItem}>
-          {item.name} - {item.checkedIn ? 'Checked In' : 'Not Checked In'}
+          {item.name} - {item.checkedIn ? t('checkedIn') : t('notCheckedIn')}
         </Text>
         <View style={styles.separator} />
       </View>
     );
   };
-
+  
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/*///////// Navbar //////////*/}
+      {/* Navbar */}
       <View style={styles.navbar}>
         <Image source={require("../../assets/logo1.png")} style={styles.logo} />
-        <Text style={styles.screenName}>ADMIN PAGE</Text>
+        <Text style={styles.screenName}>{t('adminPage')}</Text>
       </View>
-
-      {/*///////// Back Button //////////*/}
+  
+      {/* Back Button */}
       <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
-        <Text style={styles.buttonText}>Back to Profile</Text>
+        <Text style={styles.buttonText}>{t('backToProfile')}</Text>
       </Pressable>
-
-      {/*///////// Users Section with View All Button //////////*/}
+  
+      {/* Users Section with View All Button */}
       <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-      <Text style={styles.listTitle}>Users</Text>
-        <TouchableOpacity 
-          onPress={() => navigation.navigate('ViewAll', { type: 'users', data: userData })} 
-          style={styles.viewAllButton}
-        >
-          <Text style={styles.viewAllText}>View All</Text>
-        </TouchableOpacity>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.listTitle}>{t('users')}</Text>
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('ViewAll', { type: 'users', data: userData })} 
+            style={styles.viewAllButton}
+          >
+            <Text style={styles.viewAllText}>{t('viewAll')}</Text>
+          </TouchableOpacity>
+        </View>
+        <FlatList
+          style={styles.listContainer}
+          data={userData}
+          keyExtractor={item => item.id}
+          renderItem={renderUserItem}
+        />
       </View>
-      <FlatList
-        style={styles.listContainer}
-        data={userData}
-        keyExtractor={item => item.id}
-        renderItem={renderUserItem}
-      />
-      </View>
-      {/*///////// History Section with View All Button //////////*/}
+  
+      {/* History Section with View All Button */}
       <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.listTitle}>History</Text>
-        <TouchableOpacity 
-          onPress={() => navigation.navigate('ViewAll', { type: 'history', data: historyData })} 
-          style={styles.viewAllButton}
-        >
-          <Text style={styles.viewAllText}>View All</Text>
-        </TouchableOpacity>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.listTitle}>{t('history')}</Text>
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('ViewAll', { type: 'history', data: historyData })} 
+            style={styles.viewAllButton}
+          >
+            <Text style={styles.viewAllText}>{t('viewAll')}</Text>
+          </TouchableOpacity>
+        </View>
+        <FlatList
+          style={styles.listContainer}
+          data={historyData}
+          keyExtractor={item => item.id}
+          renderItem={renderHistoryItem}
+        />
       </View>
-      <FlatList
-        style={styles.listContainer}
-        data={historyData}
-        keyExtractor={item => item.id}
-        renderItem={renderHistoryItem}
-      />
-      </View>
+      
       {/* Date Picker Modal */}
       <DateTimePickerModal
         isVisible={isDatePickerVisible}
@@ -127,7 +133,6 @@ const AdminPage = () => {
     </SafeAreaView>
   );
 };
-
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
