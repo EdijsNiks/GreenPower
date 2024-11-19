@@ -317,7 +317,9 @@ const Warehouse = ({ route }) => {
 
       <FilterModalWarehouse
         isVisible={isFilterModalVisible}
+        screenType={"warehouse"}
         onClose={() => setFilterModalVisible(false)}
+        updateCategories={setCategories}
         categories={categories} // Display loaded categories
         selectedCategories={selectedCategories}
         handleFilter={handleCategoryFilter}

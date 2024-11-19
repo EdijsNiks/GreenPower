@@ -16,11 +16,13 @@ import ReservedItemsModal from "../../components/ReservedItems";
 import PhotoPicker from "../../components/PhotoPicker";
 import * as FileSystem from "expo-file-system";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useTranslation } from "react-i18next";
 
 const { width } = Dimensions.get("window");
 
 const ProjectsInfo = () => {
   const navigation = useNavigation();
+  const { t } = useTranslation();
   const route = useRoute();
   const { project, taskId } = route.params; // Get project data from route params
   const [modalVisible, setModalVisible] = useState(false);
@@ -28,7 +30,7 @@ const ProjectsInfo = () => {
   const [photos, setPhotos] = useState([]);
 
   // Save photo to local filesystem
-/*  const handleSavePhoto = async () => {
+  /*  const handleSavePhoto = async () => {
     if (photos.length > 0) {
       try {
       const processedPhotos = await Promise.all(
@@ -88,68 +90,64 @@ const ProjectsInfo = () => {
   };
 */
   const handleDeleteProject = async () => {
-    Alert.alert(
-      "Delete Project",
-      "Are you sure you want to delete this project? This action cannot be undone.",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              // 1. Remove project from AsyncStorage
-              await AsyncStorage.removeItem(`project_${project.id}`);
+    Alert.alert(t("deleteButton"), t("deleteConfirm"), [
+      {
+        text: t("cancel"),
+        style: "cancel",
+      },
+      {
+        text: t("delete"),
+        style: "destructive",
+        onPress: async () => {
+          try {
+            // 1. Remove project from AsyncStorage
+            await AsyncStorage.removeItem(`project_${project.id}`);
 
-              // 2. Update projects list
-              const projectsJson = await AsyncStorage.getItem("projects");
-              if (projectsJson) {
-                const projects = JSON.parse(projectsJson);
-                const updatedProjects = projects.filter(
-                  (p) => p.id !== project.id
-                );
-                await AsyncStorage.setItem(
-                  "projects",
-                  JSON.stringify(updatedProjects)
-                );
-              }
-
-              // 3. Clean up warehouse items' reserved arrays
-              const warehouseItemsJson = await AsyncStorage.getItem("items");
-              if (warehouseItemsJson) {
-                const warehouseItems = JSON.parse(warehouseItemsJson);
-
-                // Remove the project ID from all items' reserved arrays
-                const updatedWarehouseItems = warehouseItems.map((item) => {
-                  if (item.reserved && Array.isArray(item.reserved)) {
-                    return {
-                      ...item,
-                      reserved: item.reserved.filter((id) => id !== project.id),
-                    };
-                  }
-                  return item;
-                });
-
-                // Save updated warehouse items
-                await AsyncStorage.setItem(
-                  "items",
-                  JSON.stringify(updatedWarehouseItems)
-                );
-              }
-
-              // 4. Navigate back to projects screen
-              navigation.navigate("Main", { screen: "Projects" });
-            } catch (error) {
-              console.error("Error deleting project:", error);
-              Alert.alert("Error", "Failed to delete project");
+            // 2. Update projects list
+            const projectsJson = await AsyncStorage.getItem("projects");
+            if (projectsJson) {
+              const projects = JSON.parse(projectsJson);
+              const updatedProjects = projects.filter(
+                (p) => p.id !== project.id
+              );
+              await AsyncStorage.setItem(
+                "projects",
+                JSON.stringify(updatedProjects)
+              );
             }
-          },
+
+            // 3. Clean up warehouse items' reserved arrays
+            const warehouseItemsJson = await AsyncStorage.getItem("items");
+            if (warehouseItemsJson) {
+              const warehouseItems = JSON.parse(warehouseItemsJson);
+
+              // Remove the project ID from all items' reserved arrays
+              const updatedWarehouseItems = warehouseItems.map((item) => {
+                if (item.reserved && Array.isArray(item.reserved)) {
+                  return {
+                    ...item,
+                    reserved: item.reserved.filter((id) => id !== project.id),
+                  };
+                }
+                return item;
+              });
+
+              // Save updated warehouse items
+              await AsyncStorage.setItem(
+                "items",
+                JSON.stringify(updatedWarehouseItems)
+              );
+            }
+
+            // 4. Navigate back to projects screen
+            navigation.navigate("Main", { screen: "Projects" });
+          } catch (error) {
+            console.error("Error deleting project:", error);
+            Alert.alert("Error", t("failedToDeleteProject"));
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   // Render project details if project exists
@@ -184,14 +182,14 @@ const ProjectsInfo = () => {
       <ScrollView>
         {/* Project Info Section */}
         <View style={styles.projectInfo}>
-          <Text style={styles.infoText}>NAME: {project.name}</Text>
-          <Text style={styles.infoText}>Category: {project.category}</Text>
-          <Text style={styles.infoText}>Created at: {project.dateCreated}</Text>
+          <Text style={styles.infoText}>{t("name")}: {project.name}</Text>
+          <Text style={styles.infoText}>{t("category")}: {project.category}</Text>
+          <Text style={styles.infoText}>{t("createdAt")}: {project.dateCreated}</Text>
           <TouchableOpacity
             style={styles.deleteButton}
             onPress={handleDeleteProject}
           >
-            <Text style={styles.buttonText}>Delete Project</Text>
+            <Text style={styles.buttonText}>{t("deleteButton")}</Text>
           </TouchableOpacity>
         </View>
 
@@ -199,12 +197,12 @@ const ProjectsInfo = () => {
 
         {/* Reserved Item Info Section */}
         <View style={styles.reservedItemsSection}>
-          <Text style={styles.sectionTitle}>Reserved Items</Text>
+          <Text style={styles.sectionTitle}>{t("reservedItems")}</Text>
           <TouchableOpacity
             style={styles.addButton}
             onPress={() => setModalVisible(true)}
           >
-            <Text style={styles.buttonText}>View Reserved Items</Text>
+            <Text style={styles.buttonText}>{t("viewReservedItems")}</Text>
           </TouchableOpacity>
         </View>
 
@@ -214,19 +212,19 @@ const ProjectsInfo = () => {
             style={styles.finishButtonBack}
             onPress={() => navigation.navigate("Main", { screen: "Projects" })}
           >
-            <Text style={styles.buttonText}>Go back</Text>
+            <Text style={styles.buttonText}>{t("back")}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.editButton}>
-            <Text style={styles.buttonText}>Edit Info</Text>
+            <Text style={styles.buttonText}>{t("editProject")}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.finishButton}>
-            <Text style={styles.buttonText}>Finish Project</Text>
+            <Text style={styles.buttonText}>{t("finishProject")}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Project Description */}
-        <Text style={styles.description}>PROJECT DESCRIPTION</Text>
+        <Text style={styles.description}>{t("descriptionProject")}</Text>
         <Text style={styles.descriptionText}>{project.description}</Text>
 
         {/* Photos Section */}
@@ -246,7 +244,7 @@ const ProjectsInfo = () => {
               style={styles.saveButton}
               onPress={handleSavePhoto}
             >
-              <Text style={styles.buttonText}>Save Photos</Text>
+              <Text style={styles.buttonText}>{t("savePhotos")}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -317,13 +315,13 @@ const styles = StyleSheet.create({
   finishButton: {
     backgroundColor: "#A4D337",
     paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingHorizontal: 10,
     borderRadius: 5,
   },
   finishButtonBack: {
     backgroundColor: "red",
     paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingHorizontal: 10,
     borderRadius: 5,
   },
   buttonText: {

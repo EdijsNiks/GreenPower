@@ -206,10 +206,12 @@ const Projects = () => {
       {/* Filter Modal */}
       <FilterModalWarehouse
         isVisible={isFilterModalVisible}
+        screenType="projects"
         onClose={() => setFilterModalVisible(false)}
         categories={categories} // Display loaded categories
         selectedCategories={selectedCategories}
         handleFilter={handleCategoryFilter}
+        updateCategories={setCategories}
         clearSelection={() => {
           setSelectedCategories([]);
           setTaskList(originalTaskList); // Use the original task list
@@ -411,6 +413,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 10,
   },
+  
 });
 
 export default Projects;
