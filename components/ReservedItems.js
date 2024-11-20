@@ -7,32 +7,26 @@ import {
   StyleSheet,
   Modal,
   TextInput,
+  Alert,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTranslation } from "react-i18next";
 
-const ReservedItemsModal = ({
-  visible,
-  onClose,
-  navigation,
-  taskId, // Current project ID
-}) => {
+const ReservedItemsModal = ({ visible, onClose, navigation, taskId }) => {
   const [searchText, setSearchText] = useState("");
   const [reservedItems, setReservedItems] = useState([]);
   const [warehouseItems, setWarehouseItems] = useState([]);
   const [projects, setProjects] = useState([]);
+  const [countInputs, setCountInputs] = useState({});
   const { t } = useTranslation();
 
-  // Load warehouse items, projects and reserved items on modal open
   useEffect(() => {
     if (visible) {
       loadWarehouseItems();
       loadReservedItems();
       loadProjects();
     }
-    
   }, [visible]);
-
   const loadProjects = async () => {
     try {
       const storedProjects = await AsyncStorage.getItem("projects");
@@ -56,51 +50,65 @@ const ReservedItemsModal = ({
     }
   };
 
-const loadReservedItems = async () => {
-  try {
-    const storedProjects = await AsyncStorage.getItem("projects");
-    const storedItems = await AsyncStorage.getItem("items");
+  const loadReservedItems = async () => {
+    try {
+      const storedProjects = await AsyncStorage.getItem("projects");
+      const storedItems = await AsyncStorage.getItem("items");
 
-    if (storedProjects && storedItems) {
-      const parsedProjects = JSON.parse(storedProjects);
-      const parsedItems = JSON.parse(storedItems);
+      if (storedProjects && storedItems) {
+        const parsedProjects = JSON.parse(storedProjects);
+        const parsedItems = JSON.parse(storedItems);
 
-      // Find the current project by taskId
-      const currentProject = parsedProjects.find((project) => project.id === taskId);
+        // Find the current project by taskId
+        const currentProject = parsedProjects.find(
+          (project) => project.id === taskId
+        );
 
-      if (currentProject && Array.isArray(currentProject.reserved) && currentProject.reserved.length > 0) {
-        // Map each reserved item in the project to its corresponding item in warehouseItems
-        const projectReservedItems = currentProject.reserved.map((reservedItem) => {
-          // Find the matching item in the warehouseItems array
-          const matchingWarehouseItem = parsedItems.find((item) => item.id === reservedItem.itemId);
-          if (matchingWarehouseItem) {
-            // Include the reserved count from the project
-            return {
-              ...matchingWarehouseItem,
-              reserved: [{ projectId: taskId, count: reservedItem.count }],
-            };
-          }
-          return null; // Filter out items not found in warehouseItems
-        }).filter((item) => item !== null); // Remove any null values
+        if (
+          currentProject &&
+          Array.isArray(currentProject.reserved) &&
+          currentProject.reserved.length > 0
+        ) {
+          // Map each reserved item in the project to its corresponding item in warehouseItems
+          const projectReservedItems = currentProject.reserved
+            .map((reservedItem) => {
+              // Find the matching item in the warehouseItems array
+              const matchingWarehouseItem = parsedItems.find(
+                (item) => item.id === reservedItem.itemId
+              );
+              if (matchingWarehouseItem) {
+                // Include the reserved count from the project
+                return {
+                  ...matchingWarehouseItem,
+                  reserved: [{ projectId: taskId, count: reservedItem.count }],
+                };
+              }
+              return null; // Filter out items not found in warehouseItems
+            })
+            .filter((item) => item !== null); // Remove any null values
 
-        setReservedItems(projectReservedItems);
-      } else {
-        setReservedItems([]); // No reserved items if project has an empty reserved array
+          setReservedItems(projectReservedItems);
+        } else {
+          setReservedItems([]); // No reserved items if project has an empty reserved array
+        }
       }
+    } catch (error) {
+      console.error("Error loading reserved items:", error);
     }
-  } catch (error) {
-    console.error("Error loading reserved items:", error);
-  }
-};
+  };
 
   const updateStorage = async (updatedItems, updatedProjects) => {
     try {
       const promises = [];
       if (updatedItems) {
-        promises.push(AsyncStorage.setItem("items", JSON.stringify(updatedItems)));
+        promises.push(
+          AsyncStorage.setItem("items", JSON.stringify(updatedItems))
+        );
       }
       if (updatedProjects) {
-        promises.push(AsyncStorage.setItem("projects", JSON.stringify(updatedProjects)));
+        promises.push(
+          AsyncStorage.setItem("projects", JSON.stringify(updatedProjects))
+        );
       }
       await Promise.all(promises);
     } catch (error) {
@@ -119,9 +127,20 @@ const loadReservedItems = async () => {
       return;
     }
 
+    // Additional check to ensure the item is not already in reservedItems for this project
+    const isItemAlreadyInReserved = reservedItems.some(
+      (reservedItem) => reservedItem.id === item.id
+    );
+
+    if (isItemAlreadyInReserved) {
+      alert(t("cannotAddSameItemTwice")); // Add this translation key to your localization files
+      return;
+    }
+
+    // Proceed with adding the item if it's not already reserved
     const updatedItem = {
       ...item,
-      count: item.count - 1,
+      count: item.count,
       reserved: [...item.reserved, { projectId: taskId, count: 1 }],
     };
     const updatedWarehouseItems = warehouseItems.map((warehouseItem) =>
@@ -147,18 +166,12 @@ const loadReservedItems = async () => {
   };
 
   const onRemove = async (itemId) => {
-    const updatedReservedItems = reservedItems.map((item) => {
-      if (item.id === itemId) {
-        return {
-          ...item,
-          count: item.count - 1,
-          reserved: item.reserved.filter((res) => res.projectId !== taskId),
-        };
-      }
-      return item;
-    });
+    // Remove the item from reservedItems
+    const updatedReservedItems = reservedItems.filter(
+      (item) => item.id !== itemId
+    );
 
-    // Update project's reserved items
+    // Update the project's reserved items
     const updatedProjects = projects.map((project) => {
       if (project.id === taskId) {
         return {
@@ -169,19 +182,30 @@ const loadReservedItems = async () => {
       return project;
     });
 
-    setReservedItems(updatedReservedItems);
-    setProjects(updatedProjects);
-
+    // Update the warehouse items to restore the item's count
     const updatedWarehouseItems = warehouseItems.map((item) => {
       if (item.id === itemId) {
+        const totalCountToRestore =
+          reservedItems
+            .find((reservedItem) => reservedItem.id === itemId)
+            ?.reserved.reduce(
+              (sum, res) => (res.projectId === taskId ? sum + res.count : sum),
+              0
+            ) || 0;
+
         return {
           ...item,
-          count: item.count - 1,
+          count: item.count + totalCountToRestore,
           reserved: item.reserved.filter((res) => res.projectId !== taskId),
         };
       }
       return item;
     });
+
+    // Update state and storage
+    setReservedItems(updatedReservedItems);
+    setProjects(updatedProjects);
+    setWarehouseItems(updatedWarehouseItems);
 
     await updateStorage(updatedWarehouseItems, updatedProjects);
   };
@@ -235,6 +259,61 @@ const loadReservedItems = async () => {
 
     await updateStorage(updatedWarehouseItems, updatedProjects);
   };
+  const updateProjectItemCount = async (itemId, increment) => {
+    const itemInWarehouse = warehouseItems.find((item) => item.id === itemId);
+    const itemReservedForProject = reservedItems.find((item) => item.id === itemId);
+    const currentReservation = itemReservedForProject?.reserved.find(
+      (res) => res.projectId === taskId
+    );
+  
+    if (!itemInWarehouse || !currentReservation) {
+      alert("Error: Item or reservation not found.");
+      return;
+    }
+  
+    const totalAvailable = itemInWarehouse.count + currentReservation.count; // Total available stock (warehouse + current reserved count)
+  
+    // Ensure the new count doesn't exceed total available stock or drop below 0
+    const newCount = Math.max(0, currentReservation.count + increment);
+  
+    if (newCount > totalAvailable) {
+      alert("Cannot reserve more than the available stock.");
+      return;
+    }
+  
+    const updatedReservedItems = reservedItems.map((item) => {
+      if (item.id === itemId) {
+        const updatedReserved = item.reserved.map((res) => {
+          if (res.projectId === taskId) {
+            return { ...res, count: newCount };
+          }
+          return res;
+        });
+        return { ...item, reserved: updatedReserved };
+      }
+      return item;
+    });
+  
+    // Update project's reserved items
+    const updatedProjects = projects.map((project) => {
+      if (project.id === taskId) {
+        const updatedReserved = project.reserved.map((res) => {
+          if (res.itemId === itemId) {
+            return { ...res, count: newCount };
+          }
+          return res;
+        });
+        return { ...project, reserved: updatedReserved };
+      }
+      return project;
+    });
+  
+    setReservedItems(updatedReservedItems);
+    setProjects(updatedProjects);
+  
+    // Only update the projects in storage
+    await updateStorage(null, updatedProjects);
+  };
 
   const getItemCount = (item) => {
     const reservation = item.reserved.find((res) => res.projectId === taskId);
@@ -243,16 +322,11 @@ const loadReservedItems = async () => {
 
   const renderItem = ({ item }) => (
     <View style={styles.itemContainer}>
-      <TouchableOpacity
-        style={styles.itemInfo}
-        onPress={() =>
-          navigation.navigate("WarehouseItemInfo", {
-            itemData: item,
-          })
-        }
-      >
+      <TouchableOpacity style={styles.itemInfo}>
         <Text style={styles.itemText}>{item.name}</Text>
-        <Text style={styles.countText}>{t("count")}: {getItemCount(item)}</Text>
+        <Text style={styles.countText}>
+          {t("count")}: {getItemCount(item)}
+        </Text>
       </TouchableOpacity>
       <View style={styles.countControls}>
         <TouchableOpacity
@@ -261,9 +335,9 @@ const loadReservedItems = async () => {
         >
           <Text style={styles.buttonText}>-</Text>
         </TouchableOpacity>
-       <TouchableOpacity
+        <TouchableOpacity
           style={styles.countButton}
-          onPress={() => updateItemCount(item.id, 1)}
+          onPress={() => updateProjectItemCount(item.id, 1)}
         >
           <Text style={styles.buttonText}>+</Text>
         </TouchableOpacity>
@@ -275,16 +349,22 @@ const loadReservedItems = async () => {
   );
 
   const renderWarehouseItem = ({ item }) => (
-    <TouchableOpacity style={styles.warehouseItemInfo} onPress={() => onAdd(item)}>
+    <TouchableOpacity
+      style={styles.warehouseItemInfo}
+      onPress={() => onAdd(item)}
+    >
       <Text style={styles.itemText}>{item.name}</Text>
-      <Text style={styles.availableCount}>{t("available")}: {item.count}</Text>
+      <Text style={styles.availableCount}>
+        {t("available")}: {item.count}
+      </Text>
     </TouchableOpacity>
   );
 
   // Sort reserved items by project ID
-  reservedItems.sort((a, b) =>
-    a.reserved.find((res) => res.projectId === taskId).count -
-    b.reserved.find((res) => res.projectId === taskId).count
+  reservedItems.sort(
+    (a, b) =>
+      a.reserved.find((res) => res.projectId === taskId).count -
+      b.reserved.find((res) => res.projectId === taskId).count
   );
 
   return (
@@ -337,7 +417,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+    borderBottomColor: "#ddd",
   },
   listContainer: {
     flex: 1,
@@ -397,33 +477,32 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
   },
   countControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginRight: 10,
   },
   countButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
     padding: 8,
     borderRadius: 5,
     marginHorizontal: 5,
   },
   countButtonMinus: {
-    backgroundColor: 'red',
+    backgroundColor: "red",
     padding: 8,
     borderRadius: 5,
     marginHorizontal: 5,
   },
   countText: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
     marginTop: 4,
   },
   availableCount: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
     marginTop: 2,
   },
 });
 
 export default ReservedItemsModal;
-

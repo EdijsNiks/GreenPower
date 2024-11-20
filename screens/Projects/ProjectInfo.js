@@ -9,6 +9,7 @@ import {
   Dimensions,
   Modal,
   Alert,
+  TextInput,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -24,41 +25,99 @@ const ProjectsInfo = () => {
   const navigation = useNavigation();
   const { t } = useTranslation();
   const route = useRoute();
-  const { project, taskId } = route.params; // Get project data from route params
+  const { project, taskId } = route.params;
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
-  const [photos, setPhotos] = useState([]);
+  const [isEditing, setIsEditing] = useState(false);
+  const [updatedDescription, setUpdatedDescription] = useState(project.description || "");
+  const [projectData, setProjectData] = useState(project);
+  const [tempPhotos, setTempPhotos] = useState([]);
+  const [projectPhotos, setProjectPhotos] = useState(project.photos || []);
 
-  // Save photo to local filesystem
-  /*  const handleSavePhoto = async () => {
-    if (photos.length > 0) {
-      try {
-      const processedPhotos = await Promise.all(
-        photos.map(async (photo) => {
-          const localUri = await savePhotoToFileSystem(photo.uri);
-          return { uri: localUri };
-        })
-      );
-      const newItem = {
-        ...project,
-        photos: processedPhotos,
+  const handleSaveDescription = async () => {
+    try {
+      const updatedProject = {
+        ...projectData,
+        description: updatedDescription
       };
+      setProjectData(updatedProject);
+
+      // Update the project in AsyncStorage
+      const projectsJson = await AsyncStorage.getItem("projects");
+      if (projectsJson) {
+        const projects = JSON.parse(projectsJson);
+        const updatedProjects = projects.map((p) =>
+          p.id === project.id ? updatedProject : p
+        );
+        await AsyncStorage.setItem("projects", JSON.stringify(updatedProjects));
+      }
+
+      // Also update individual project storage
+      await AsyncStorage.setItem(
+        `project_${project.id}`,
+        JSON.stringify(updatedProject)
+      );
+
+      setIsEditing(false);
+      Alert.alert(t("success"), t("descriptionUpdatedSuccessfully"));
+    } catch (error) {
+      console.error("Error saving updated description:", error);
+      Alert.alert(t("error"), t("failedToUpdateDescription"));
+    }
+  };
+  // Save photo to local filesystem and update project
+  const handleSavePhoto = async () => {
+    if (tempPhotos.length > 0) {
+      try {
+        const processedPhotos = await Promise.all(
+          tempPhotos.map(async (photo) => {
+            const localUri = await savePhotoToFileSystem(photo.uri);
+            return { uri: localUri };
+          })
+        );
+
+        // Combine existing and new unique photos
+        const updatedPhotos = [
+          ...projectPhotos,
+          ...processedPhotos.filter(
+            (newPhoto) =>
+              !projectPhotos.some(
+                (existingPhoto) => existingPhoto.uri === newPhoto.uri
+              )
+          ),
+        ];
+
+        const newItem = {
+          ...project,
+          photos: updatedPhotos,
+        };
+
         // Save updated project to AsyncStorage
         try {
           await AsyncStorage.setItem(
             `project_${project.id}`,
             JSON.stringify(newItem)
           );
+
+          // Update projects list in AsyncStorage
+          const projectsJson = await AsyncStorage.getItem("projects");
+          if (projectsJson) {
+            const projects = JSON.parse(projectsJson);
+            const updatedProjects = projects.map((p) =>
+              p.id === project.id ? newItem : p
+            );
+            await AsyncStorage.setItem(
+              "projects",
+              JSON.stringify(updatedProjects)
+            );
+          }
+
+          // Update local state and reset temporary photos
+          setProjectPhotos(updatedPhotos);
+          setTempPhotos([]);
         } catch (error) {
           console.error("Error updating AsyncStorage:", error);
         }
-
-        // Update the project object state for real-time updates
-        project.photos = processedPhotos;
-
-        // Clear local photos state and close modal
-        setPhotos([]);
-        setModalVisible(false);
 
         Alert.alert("Success", "Photos saved successfully!");
       } catch (error) {
@@ -69,6 +128,7 @@ const ProjectsInfo = () => {
       Alert.alert("No Photos", "Please select some photos before saving.");
     }
   };
+
   const savePhotoToFileSystem = async (uri) => {
     try {
       if (uri.startsWith("file://")) {
@@ -88,7 +148,15 @@ const ProjectsInfo = () => {
       return uri;
     }
   };
-*/
+
+  // Handle full-screen photo view
+  const handleImagePress = (photo) => {
+    setSelectedPhoto(photo);
+  };
+
+  const closeFullScreen = () => {
+    setSelectedPhoto(null);
+  };
   const handleDeleteProject = async () => {
     Alert.alert(t("deleteButton"), t("deleteConfirm"), [
       {
@@ -182,9 +250,15 @@ const ProjectsInfo = () => {
       <ScrollView>
         {/* Project Info Section */}
         <View style={styles.projectInfo}>
-          <Text style={styles.infoText}>{t("name")}: {project.name}</Text>
-          <Text style={styles.infoText}>{t("category")}: {project.category}</Text>
-          <Text style={styles.infoText}>{t("createdAt")}: {project.dateCreated}</Text>
+          <Text style={styles.infoText}>
+            {t("name")}: {project.name}
+          </Text>
+          <Text style={styles.infoText}>
+            {t("category")}: {project.category}
+          </Text>
+          <Text style={styles.infoText}>
+            {t("createdAt")}: {project.dateCreated}
+          </Text>
           <TouchableOpacity
             style={styles.deleteButton}
             onPress={handleDeleteProject}
@@ -214,32 +288,57 @@ const ProjectsInfo = () => {
           >
             <Text style={styles.buttonText}>{t("back")}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.editButton}>
-            <Text style={styles.buttonText}>{t("editProject")}</Text>
-          </TouchableOpacity>
+        {/* Description Edit/Save Button */}
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={isEditing ? handleSaveDescription : () => setIsEditing(true)}
+        >
+          <Text style={styles.buttonText}>
+            {isEditing ? t("save") : t("editDescription")}
+          </Text>
+        </TouchableOpacity>
 
           <TouchableOpacity style={styles.finishButton}>
             <Text style={styles.buttonText}>{t("finishProject")}</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Project Description */}
-        <Text style={styles.description}>{t("descriptionProject")}</Text>
-        <Text style={styles.descriptionText}>{project.description}</Text>
 
+        {/* Project Description Section with Edit Functionality */}
+        <Text style={styles.sectionTitle}>{t("descriptionProject")}</Text>
+        <View style={styles.descriptionContainer}>
+          {isEditing ? (
+            <TextInput
+              style={styles.descriptionInput}
+              value={updatedDescription}
+              onChangeText={setUpdatedDescription}
+              multiline
+              placeholder={t("enterDescription")}
+            />
+          ) : (
+            <Text style={styles.descriptionText}>
+              {projectData.description || t("noDescriptionAvailable")}
+            </Text>
+          )}
+        </View>
         {/* Photos Section */}
         <View style={styles.photosSection}>
           <PhotoPicker
-            photos={photos}
-            onPhotosChange={setPhotos}
+            photos={tempPhotos}
+            onPhotosChange={setTempPhotos}
             containerStyle={styles.photosSection}
           />
           <View style={styles.photoGallery}>
-            {project.photos?.map((photo, index) => (
-              <Image key={index} source={{ uri: photo }} style={styles.photo} />
+            {projectPhotos?.map((photo, index) => (
+              <TouchableOpacity
+                key={index}
+                onPress={() => handleImagePress(photo)}
+              >
+                <Image source={{ uri: photo.uri }} style={styles.photo} />
+              </TouchableOpacity>
             ))}
           </View>
-          {photos.length > 0 && (
+          {tempPhotos.length > 0 && (
             <TouchableOpacity
               style={styles.saveButton}
               onPress={handleSavePhoto}
@@ -248,6 +347,30 @@ const ProjectsInfo = () => {
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Full Screen Photo Modal */}
+        {selectedPhoto && (
+          <Modal
+            visible={!!selectedPhoto}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={closeFullScreen}
+          >
+            <View style={styles.modalBackground}>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={closeFullScreen}
+              >
+                <Text style={styles.closeButtonText}>X</Text>
+              </TouchableOpacity>
+              <Image
+                source={{ uri: selectedPhoto.uri }}
+                style={styles.fullScreenImage}
+                resizeMode="contain"
+              />
+            </View>
+          </Modal>
+        )}
 
         {/* Modal for Reserved Items */}
         <ReservedItemsModal
@@ -357,7 +480,7 @@ const styles = StyleSheet.create({
   },
   photoGallery: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    gap: 8,
   },
   photo: {
     width: 100,
@@ -461,6 +584,65 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 5,
+  },
+  modalBackground: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullScreenImage: {
+    width: '100%',
+    height: '80%',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    backgroundColor: '#A4D337',
+    borderRadius: 15,
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  closeButtonText: {
+    color: 'black',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  descriptionContainer: {
+    padding: 15,
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    marginHorizontal: 15,
+    marginBottom: 15,
+  },
+  
+  descriptionInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 4,
+    padding: 10,
+    minHeight: 100,
+    textAlignVertical: 'top',
+  },
+  
+  editDescriptionButton: {
+    backgroundColor: '#4a90e2',
+    padding: 10,
+    borderRadius: 5,
+    marginHorizontal: 15,
+    marginBottom: 15,
+    alignItems: 'center',
+  },
+  
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginHorizontal: 15,
+    marginVertical: 10,
   },
 });
 

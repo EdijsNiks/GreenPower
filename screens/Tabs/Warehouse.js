@@ -266,7 +266,7 @@ const Warehouse = ({ route }) => {
           style={styles.addButton}
           onPress={() => navigation.navigate("AddItemToWarehouse")}
         >
-          <Text style={styles.addButtonText}>{t("addItem")}</Text>
+          <Text style={styles.addButtonText}>{t("add_item")}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.addButton}

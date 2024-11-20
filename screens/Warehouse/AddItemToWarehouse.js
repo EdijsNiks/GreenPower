@@ -147,7 +147,7 @@ const AddItemToWarehouse = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.navbar}>
         <Image source={require("../../assets/logo1.png")} style={styles.logo} />
-        <Text style={styles.screenName}>{t('addItem')}</Text>
+        <Text style={styles.screenName}>{t('add_item')}</Text>
       </View>
 
       <ScrollView>

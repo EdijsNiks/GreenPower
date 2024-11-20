@@ -17,7 +17,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AuthContext } from "../../AuthContext";
 import { useTranslation } from "react-i18next";
-import i18next, { languageResources } from "../../services/i18next";
+import i18next from "../../services/i18next";
 
 const Login = () => {
   const { t } = useTranslation();
@@ -34,15 +34,6 @@ const Login = () => {
   useEffect(() => {
     initializeLanguage();
   }, []);
-  // Function to change and persist language
-  const changeLanguage = async (lng) => {
-    try {
-      await AsyncStorage.setItem("language", lng); // Save the selected language
-      changeLng(lng); // Apply the language
-    } catch (error) {
-      console.error("Error saving language preference:", error);
-    }
-  };
 
   // Initialize language from AsyncStorage
   const initializeLanguage = async () => {
@@ -51,11 +42,22 @@ const Login = () => {
       if (savedLanguage) {
         changeLng(savedLanguage); // Apply saved language
       } else {
-        const defaultLanguage = "en"; // Set a default language
+        const defaultLanguage = "lv"; // Default to Latvian
         changeLng(defaultLanguage);
+        await AsyncStorage.setItem("language", defaultLanguage); // Save default
       }
     } catch (error) {
       console.error("Error initializing language preference:", error);
+    }
+  };
+
+  // Function to change and persist language
+  const changeLanguage = async (lng) => {
+    try {
+      await AsyncStorage.setItem("language", lng); // Save the selected language
+      changeLng(lng); // Apply the language
+    } catch (error) {
+      console.error("Error saving language preference:", error);
     }
   };
 
@@ -161,19 +163,28 @@ const Login = () => {
           <View style={styles.languageButtons}>
             <TouchableOpacity
               style={styles.languageButton}
-              onPress={() => changeLanguage("lv")}
+              onPress={() => {
+                changeLanguage("lv");
+                Alert.alert(t("language"), t("languageChangedMessage"));
+              }}
             >
               <Text style={styles.languageButtonText}>Latviešu</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.languageButton}
-              onPress={() => changeLanguage("en")}
+              onPress={() => {
+                changeLanguage("en");
+                Alert.alert(t("language"), t("languageChangedMessage"));
+              }}
             >
               <Text style={styles.languageButtonText}>English</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.languageButton}
-              onPress={() => changeLanguage("rus")}
+              onPress={() => {
+                changeLanguage("rus");
+                Alert.alert(t("language"), t("languageChangedMessage"));
+              }}
             >
               <Text style={styles.languageButtonText}>Россия</Text>
             </TouchableOpacity>

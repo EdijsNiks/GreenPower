@@ -90,7 +90,7 @@ const PhotoPicker = ({ photos, onPhotosChange, containerStyle }) => {
   };
 
   return (
-    <View style={[styles.container, containerStyle]}>
+    <View style={[styles.container]}>
       <View style={styles.photoRow}>
         <Text style={styles.photosTitle}>{t("photosTitle")}</Text>
         <TouchableOpacity style={styles.addPhotoButton} onPress={handleAddPhoto}>
@@ -137,13 +137,14 @@ const PhotoPicker = ({ photos, onPhotosChange, containerStyle }) => {
 };
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
+    padding: 1,
   },
   photoRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 16,
+    marginHorizontal: 10,
   },
   photosTitle: {
     fontSize: 16,
@@ -154,6 +155,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
+    marginHorizontal: 3, // Adds space between the input and the sides of the container
+
   },
   buttonText: {
     color: "white",

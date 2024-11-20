@@ -188,5 +188,13 @@
 "deleteCategory": "Dzēst kategoriju",
 "confirmDeleteCategory": "Vai esat pārliecināts, ka vēlaties dzēst kategoriju? Šo darbību nevar atsaukt.",
 "errorDeletingCategory": "Neizdevās dzāst kategoriju",
-"enterNewCategory": "Ievadiet jaunu kategoriju"
+"enterNewCategory": "Ievadiet jaunu kategoriju",
+"language": "Valoda",
+"languageChangedMessage": "Valoda atjaunināta!",
+"descriptionUpdatedSuccessfully": "Apraksts atjaunināts!",
+"photosUpdatedSuccessfully": "Fotogrāfijas atjauninātas!",
+"editDescription": "Rediģāt aprakstu",
+"cannotAddSameItemTwice": "Nevar pievienot vienumu divas reizes",
+"reservedCount": "Rezervācijas daudzums"
+
   }

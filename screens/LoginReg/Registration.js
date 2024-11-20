@@ -42,6 +42,23 @@ const Registration = () => {
     initializeLanguage();
   }, []);
   // Function to change and persist language
+
+  const initializeLanguage = async () => {
+    try {
+      const savedLanguage = await AsyncStorage.getItem("language");
+      if (savedLanguage) {
+        changeLng(savedLanguage); // Apply saved language
+      } else {
+        const defaultLanguage = "lv"; // Default to Latvian
+        changeLng(defaultLanguage);
+        await AsyncStorage.setItem("language", defaultLanguage); // Save default
+      }
+    } catch (error) {
+      console.error("Error initializing language preference:", error);
+    }
+  };
+
+  // Function to change and persist language
   const changeLanguage = async (lng) => {
     try {
       await AsyncStorage.setItem("language", lng); // Save the selected language
@@ -51,20 +68,6 @@ const Registration = () => {
     }
   };
 
-  // Initialize language from AsyncStorage
-  const initializeLanguage = async () => {
-    try {
-      const savedLanguage = await AsyncStorage.getItem("language");
-      if (savedLanguage) {
-        changeLng(savedLanguage); // Apply saved language
-      } else {
-        const defaultLanguage = "en"; // Set a default language
-        changeLng(defaultLanguage);
-      }
-    } catch (error) {
-      console.error("Error initializing language preference:", error);
-    }
-  };
 
   const validateEmail = (email) => {
     // Ensure email has an "@" symbol and is at least 5 characters long
@@ -224,21 +227,30 @@ const Registration = () => {
         {/* Choosing Language */}
         <View style={styles.languageContainer}>
           <View style={styles.languageButtons}>
-            <TouchableOpacity
+          <TouchableOpacity
               style={styles.languageButton}
-              onPress={() => changeLanguage("lv")}
+              onPress={() => {
+                changeLanguage("lv");
+                Alert.alert(t("language"), t("languageChangedMessage"));
+              }}
             >
               <Text style={styles.languageButtonText}>Latviešu</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.languageButton}
-              onPress={() => changeLanguage("en")}
+              onPress={() => {
+                changeLanguage("en");
+                Alert.alert(t("language"), t("languageChangedMessage"));
+              }}
             >
               <Text style={styles.languageButtonText}>English</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.languageButton}
-              onPress={() => changeLanguage("rus")}
+              onPress={() => {
+                changeLanguage("rus");
+                Alert.alert(t("language"), t("languageChangedMessage"));
+              }}
             >
               <Text style={styles.languageButtonText}>Россия</Text>
             </TouchableOpacity>

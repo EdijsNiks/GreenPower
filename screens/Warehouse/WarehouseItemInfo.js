@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import styles from "../../styles/WarehouseItemInfoStyles.js";
 import { useTranslation } from "react-i18next";
+import PhotoPicker from "../../components/PhotoPicker.js";
 
 const WarehouseItemInfo = () => {
   const navigation = useNavigation();
@@ -31,6 +32,40 @@ const WarehouseItemInfo = () => {
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [reservedProjectIds, setReservedProjectIds] = useState([]);
   const [reservationCount, setReservationCount] = useState(0);
+  const [updatedDescription, setUpdatedDescription] = useState(
+    itemData.description || ""
+  );
+  const [isEditing, setIsEditing] = useState(false);
+  const [tempPhotos, setTempPhotos] = useState([]);
+
+  const handleSavePhotos = async () => {
+    try {
+      // Combine existing photos with new ones
+      const updatedPhotos = [...(itemDetails.photos || []), ...tempPhotos];
+      const updatedItem = { ...itemDetails, photos: updatedPhotos };
+      
+      // Update local state
+      setItemDetails(updatedItem);
+      
+      // Update AsyncStorage
+      const warehouseItemsJson = await AsyncStorage.getItem("items");
+      if (warehouseItemsJson) {
+        const warehouseItems = JSON.parse(warehouseItemsJson);
+        const updatedItems = warehouseItems.map((item) =>
+          item.id === itemDetails.id ? updatedItem : item
+        );
+        await AsyncStorage.setItem("items", JSON.stringify(updatedItems));
+      }
+      
+      // Clear temp photos
+      setTempPhotos([]);
+      
+      Alert.alert(t("success"), t("photosUpdatedSuccessfully"));
+    } catch (error) {
+      console.error("Error saving photos:", error);
+      Alert.alert(t("error"), t("failedToUpdatePhotos"));
+    }
+  };
 
   const getProjectReservations = () => {
     return projects.reduce((acc, project) => {
@@ -46,6 +81,29 @@ const WarehouseItemInfo = () => {
       }
       return acc;
     }, []);
+  };
+
+  const handleSaveDescription = async () => {
+    try {
+      const updatedItem = { ...itemDetails, description: updatedDescription };
+      setItemDetails(updatedItem);
+
+      // Update the item in AsyncStorage
+      const warehouseItemsJson = await AsyncStorage.getItem("items");
+      if (warehouseItemsJson) {
+        const warehouseItems = JSON.parse(warehouseItemsJson);
+        const updatedItems = warehouseItems.map((item) =>
+          item.id === itemDetails.id ? updatedItem : item
+        );
+        await AsyncStorage.setItem("items", JSON.stringify(updatedItems));
+      }
+
+      setIsEditing(false);
+      Alert.alert(t("success"), t("descriptionUpdatedSuccessfully"));
+    } catch (error) {
+      console.error("Error saving updated description:", error);
+      Alert.alert(t("error"), t("failedToUpdateDescription"));
+    }
   };
 
   React.useEffect(() => {
@@ -378,12 +436,11 @@ const WarehouseItemInfo = () => {
           </Text>
           <Text style={styles.itemDetails}>
             {t("totalCount")}:{" "}
-            {itemDetails?.count +
-              getTotalReservedForItem(itemDetails.id, projects) || t("na")}
+            {itemDetails?.count || t("na")}
           </Text>
           <Text style={styles.itemDetails}>
-            {t("availableCount")}:{" "}
-            {itemDetails?.count - reservationCount || "0"}
+            {t("reservedCount")}:{" "}
+            { getTotalReservedForItem(itemDetails.id, projects) || "0"}
           </Text>
           <TouchableOpacity
             style={styles.deleteButton}
@@ -420,18 +477,35 @@ const WarehouseItemInfo = () => {
         </View>
 
         <Text style={styles.sectionTitle}>{t("itemDescription")}</Text>
-        <Text style={styles.descriptionText}>
-          {itemDetails?.description || t("noDescriptionAvailable")}
-        </Text>
+        <View style={styles.editableDescriptionContainer}>
+          {isEditing ? (
+            <TextInput
+              style={styles.editableDescriptionInput}
+              value={updatedDescription}
+              onChangeText={setUpdatedDescription}
+              multiline
+            />
+          ) : (
+            <Text style={styles.descriptionText}>
+              {itemDetails?.description || t("noDescriptionAvailable")}
+            </Text>
+          )}
+        </View>
 
-        <View style={styles.photosSectionHeader}>
-          <Text style={styles.sectionTitle}>{t("photos")}</Text>
-          <TouchableOpacity
-            style={styles.addPhotoButton}
-            onPress={() => Alert.alert(t("info"), t("addPhotosComingSoon"))}
-          >
-            <Text style={styles.buttonText}>{t("addPhotos")}</Text>
-          </TouchableOpacity>
+        <View style={styles.photosSection}>
+          <PhotoPicker
+            photos={tempPhotos}
+            onPhotosChange={setTempPhotos}
+            containerStyle={styles.photosSection}
+          />
+          {tempPhotos.length > 0 && (
+            <TouchableOpacity
+              style={styles.savePhotosButton}
+              onPress={handleSavePhotos}
+            >
+              <Text style={styles.buttonText}>{t("savePhotos")}</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.photoGallery}>
@@ -479,9 +553,21 @@ const WarehouseItemInfo = () => {
           <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
             <Text style={styles.buttonText}>{t("goBack")}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.editButton}>
-            <Text style={styles.buttonText}>{t("editInfo")}</Text>
-          </TouchableOpacity>
+          {isEditing ? (
+            <TouchableOpacity
+              style={styles.saveButton}
+              onPress={handleSaveDescription}
+            >
+              <Text style={styles.buttonText}>{t("save")}</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() => setIsEditing(true)}
+            >
+              <Text style={styles.buttonText}>{t("editInfo")}</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             style={styles.editButton}
             onPress={() => setShowReserveSection(!showReserveSection)}

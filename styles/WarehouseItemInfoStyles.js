@@ -77,7 +77,6 @@ const styles = StyleSheet.create({
   photoGallery: {
     flexDirection: "row",
     flexWrap: "wrap", // Allows multiple rows if there are more photos
-    justifyContent: "space-between",
     marginVertical: 10,
   },
   photo: {
@@ -90,8 +89,8 @@ const styles = StyleSheet.create({
   buttonRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginVertical: 20,
-    marginHorizontal: 20,
+    marginVertical: 10,
+    marginHorizontal: 10,
   },
   backButton: {
     backgroundColor: "red",
@@ -239,32 +238,65 @@ const styles = StyleSheet.create({
   },
   modalBackground: {
     flex: 1,
+    backgroundColor: "rgba(0,0,0,0.9)",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
   },
   fullScreenImage: {
-    width: "90%",
+    width: "100%",
     height: "80%",
-    resizeMode: "contain",
   },
   closeButton: {
     position: "absolute",
-    top: 20,
+    top: 40,
     right: 20,
     backgroundColor: "#A4D337",
-    padding: 10,
-    borderRadius: 50,
+    borderRadius: 15,
+    width: 30,
+    height: 30,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1,
   },
   closeButtonText: {
-    color: "white",
+    color: "black",
+    fontSize: 18,
     fontWeight: "bold",
   },
   deleteButton: {
-    backgroundColor: '#FF0000',
+    backgroundColor: "#FF0000",
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 5,
+  },
+  editableDescriptionInput: {
+    borderWidth: 2,
+    borderColor: "green",
+    borderRadius: 10,
+    padding: 20,
+    fontSize: 16,
+    backgroundColor: "#D3D3D3",
+    minHeight: 80,
+    textAlignVertical: "top",
+    marginHorizontal: 10, // Adds space between the input and the sides of the container
+  },
+  descriptionContainer: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    padding: 10,
+    backgroundColor: "#f9f9f9",
+    marginVertical: 10,
+  },
+  photosSection: {
+    padding: 10,
+  },
+  savePhotosButton: {
+    backgroundColor: "#A4D337",
+    padding: 10,
+    borderRadius: 5,
+    marginTop: 10,
+    alignSelf: "center",
   },
 });
 
