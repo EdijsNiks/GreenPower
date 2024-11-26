@@ -10,6 +10,7 @@ import {
   Pressable,
   Dimensions,
   Alert,
+  Platform
 } from "react-native";
 import React, { useState, useContext, useEffect } from "react";
 import { useNavigation } from "@react-navigation/native";
@@ -18,6 +19,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AuthContext } from "../../AuthContext";
 import { useTranslation } from "react-i18next";
 import i18next from "../../services/i18next";
+
 
 const Login = () => {
   const { t } = useTranslation();
@@ -65,14 +67,32 @@ const Login = () => {
 
   const handleLogin = async () => {
     try {
-      // Retrieve the user profile from AsyncStorage
-      const userProfileString = await AsyncStorage.getItem("profile");
-      if (userProfileString) {
-        const userProfile = JSON.parse(userProfileString);
-
-        // Verify the email and password
-        if (userProfile.email === email && userProfile.password === password) {
-          login("mockToken");
+      // Retrieve the user profiles from AsyncStorage
+      const userProfilesString = await AsyncStorage.getItem("profile");
+      
+      if (userProfilesString) {
+        let userProfiles;
+        try {
+          // Try to parse as JSON
+          userProfiles = JSON.parse(userProfilesString);
+        } catch (parseError) {
+          console.error("Error parsing user profiles:", parseError);
+          userProfiles = null;
+        }
+        
+        // Ensure userProfiles is an array
+        if (!Array.isArray(userProfiles)) {
+          // If it's an object, convert to array
+          userProfiles = userProfiles ? [userProfiles] : [];
+        }
+        
+        // Find a user that matches the email and password
+        const matchedUser = userProfiles.find(
+          user => user.email === email && user.password === password
+        );
+        
+        if (matchedUser) {
+          login("mockToken", matchedUser);
           Alert.alert("Welcome!", t("loginSuccess"));
         } else {
           Alert.alert("Error", t("invalidEmailorPass"));

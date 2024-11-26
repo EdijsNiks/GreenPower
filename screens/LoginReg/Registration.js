@@ -10,6 +10,7 @@ import {
   Pressable,
   Dimensions,
   Alert,
+  Platform,
 } from "react-native";
 import React, { useState, useEffect } from "react";
 import { useNavigation } from "@react-navigation/native";
@@ -17,6 +18,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTranslation } from "react-i18next";
 import i18next, { languageResources } from "../../services/i18next";
+import "react-native-get-random-values"; // Polyfill for random values
+import { v4 as uuidv4 } from "uuid";
 
 const Registration = () => {
   const [name, setName] = useState("");
@@ -31,7 +34,6 @@ const Registration = () => {
   const navigation = useNavigation();
   const { width, height } = Dimensions.get("window");
   const { t } = useTranslation();
-
 
   const togglePasswordVisibility = () => setPasswordVisible(!passwordVisible);
 
@@ -68,7 +70,6 @@ const Registration = () => {
     }
   };
 
-
   const validateEmail = (email) => {
     // Ensure email has an "@" symbol and is at least 5 characters long
     const emailPattern = /.+@.+\..+/;
@@ -91,10 +92,7 @@ const Registration = () => {
       return false;
     }
     if (!validatePassword(password)) {
-      Alert.alert(
-        "Error",
-        t("passwordMatch")
-      );
+      Alert.alert("Error", t("passwordMatch"));
       return false;
     }
     if (password !== confirmPassword) {
@@ -107,31 +105,111 @@ const Registration = () => {
   const handleRegister = async () => {
     if (validateFields()) {
       const userProfile = {
+        id: uuidv4(),
         name,
         email,
         password,
         admin,
-        checkedIn,
-        checkedInTime,
+        checkedIn: false,
+        checkedInTime: null,
+        firstCheckInTime: null,
+        lastCheckInTime: null,
+        totalTimeCheckedIn: 0,
+        monthlyCheckIns: {}, // Object to track check-ins by month
+        currentMonthCheckIns: 0,
       };
 
       try {
-        await AsyncStorage.setItem("profile", JSON.stringify(userProfile));
-        Alert.alert("Success", t("registerSuccess"), [], {
-          cancelable: true,
-        });
+        // Retrieve existing user profiles
+        const existingUserProfiles = await AsyncStorage.getItem("profile");
 
-        // Navigate to Login screen after 2 seconds
-        setTimeout(() => {
+        // Initialize profiles as an empty array if not exists or not parseable
+        let profiles = [];
+        try {
+          if (existingUserProfiles) {
+            const parsedProfiles = JSON.parse(existingUserProfiles);
+            profiles = Array.isArray(parsedProfiles)
+              ? parsedProfiles
+              : [parsedProfiles];
+          }
+        } catch (parseError) {
+          console.error("Error parsing existing profiles:", parseError);
+        }
+
+        // Check for existing email to prevent duplicate registrations
+        const emailExists = profiles.some(
+          (profile) =>
+            profile.email && profile.email.toLowerCase() === email.toLowerCase()
+        );
+
+        if (emailExists) {
+          Alert.alert("Error", t("emailAlreadyRegistered"));
+          return;
+        }
+
+        // Add new user profile
+        profiles.push(userProfile);
+
+        // Save the updated profiles
+        await AsyncStorage.setItem("profile", JSON.stringify(profiles));
+
+        // Prepare history entry
+        const historyEntry = {
+          id: Date.now().toString(),
+          user: userProfile.name,
+          action: "Profile Created",
+          description: "New user registered",
+          date: Date.now().toString(),
+        };
+
+        // Handle user history
+        const existingHistory = await AsyncStorage.getItem("userHistory");
+        let history = [];
+        try {
+          if (existingHistory) {
+            const parsedHistory = JSON.parse(existingHistory);
+            history = Array.isArray(parsedHistory)
+              ? parsedHistory
+              : [parsedHistory];
+          }
+        } catch (parseError) {
+          console.error("Error parsing existing history:", parseError);
+        }
+
+        history.push(historyEntry);
+
+        await AsyncStorage.setItem("userHistory", JSON.stringify(history));
+        // Success alert and navigation
+        if (Platform.OS === "web") {
+          window.alert(t("registerSuccess"));
           navigation.replace("Login");
-        }, 2000);
+        } else {
+          Alert.alert(
+            "Success",
+            t("registerSuccess"),
+            [
+              {
+                text: "OK",
+                onPress: () => navigation.replace("Login"),
+              },
+            ],
+            { cancelable: false }
+          );
+        }
       } catch (error) {
-        console.error("Error saving user profile:", error);
-        Alert.alert("Error", t("failedSave"));
-      }
+        if (Platform.OS === "web") {
+          window.alert(t("failedSave"));
+        } else {
+          Alert.alert(
+            "Error",
+            t("failedSave"),
+            [{ text: "OK" }],
+            { cancelable: true }
+          );
+        }
+      }  
     }
   };
-
   return (
     <SafeAreaView
       style={{ flex: 1, backgroundColor: "white", alignItems: "center" }}
@@ -217,7 +295,9 @@ const Registration = () => {
             {t("haveAccount")}{" "}
             <Text
               style={styles.registrationLink}
-              onPress={() => navigation.navigate("Login")}
+              onPress={() => (
+                navigation.navigate("Login"), console.log("Login")
+              )}
             >
               {t("pressHere")}
             </Text>
@@ -227,7 +307,7 @@ const Registration = () => {
         {/* Choosing Language */}
         <View style={styles.languageContainer}>
           <View style={styles.languageButtons}>
-          <TouchableOpacity
+            <TouchableOpacity
               style={styles.languageButton}
               onPress={() => {
                 changeLanguage("lv");

@@ -329,18 +329,6 @@ const ReservedItemsModal = ({ visible, onClose, navigation, taskId }) => {
         </Text>
       </TouchableOpacity>
       <View style={styles.countControls}>
-        <TouchableOpacity
-          style={styles.countButtonMinus}
-          onPress={() => updateItemCount(item.id, -1)}
-        >
-          <Text style={styles.buttonText}>-</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.countButton}
-          onPress={() => updateProjectItemCount(item.id, 1)}
-        >
-          <Text style={styles.buttonText}>+</Text>
-        </TouchableOpacity>
       </View>
       <TouchableOpacity style={styles.button} onPress={() => onRemove(item.id)}>
         <Text style={styles.buttonText}>{t("remove")}</Text>

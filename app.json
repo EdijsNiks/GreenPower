@@ -6,6 +6,8 @@
     "orientation": "portrait",
     "icon": "./assets/buildLogo.png",
     "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+
     "permissions": [
       "CAMERA",
       "MEDIA_LIBRARY"
@@ -28,7 +30,8 @@
       "package": "com.edijsniks.GreenPower"
     },
     "web": {
-      "favicon": "./assets/buildLogo.png"
+      "favicon": "./assets/buildLogo.png",
+      "bundler": "metro"
     },
     "extra": {
       "eas": {

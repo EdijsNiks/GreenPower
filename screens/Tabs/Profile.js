@@ -1,42 +1,66 @@
+import React, { useState, useEffect, useLayoutEffect, useContext } from "react";
 import {
-  StyleSheet,
-  Text,
-  View,
-  Image,
   SafeAreaView,
-  Dimensions,
+  View,
+  Text,
+  Image,
+  StyleSheet,
   Pressable,
+  Dimensions,
+  Platform
 } from "react-native";
-import React, { useLayoutEffect, useState, useEffect, useContext } from "react";
-import { useNavigation, useIsFocused } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
+import { useIsFocused } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import {AuthContext} from "../../AuthContext";
+import * as SecureStore from "expo-secure-store";
 import { useTranslation } from "react-i18next";
-import i18next, { languageResources } from "../../services/i18next";
-
+import { AuthContext } from "../../AuthContext"; // Adjust the import path as needed
 const { width } = Dimensions.get("window");
-
 const Profile = () => {
   const navigation = useNavigation();
   const { t } = useTranslation();
-
   const isFocused = useIsFocused();
+
   const [currentUser, setCurrentUser] = useState(null);
-  const [isCheckedIn, setIsCheckedIn] = useState(true);
   const [isPressed, setIsPressed] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+
   const { logout } = useContext(AuthContext);
 
   useEffect(() => {
     /////////// Fetch User Data ///////////
     const fetchUserData = async () => {
       try {
-        const userProfileString = await AsyncStorage.getItem("profile");
-        if (userProfileString) {
-          const userProfile = JSON.parse(userProfileString);
-          console.log("User data retrieved from AsyncStorage:", userProfile);
-          setCurrentUser(userProfile);
-          setIsAdmin(userProfile.admin === true); // Modify this according to your admin check logic
+        // Retrieve user data from SecureStore
+        const userData = Platform.OS === "web"
+        ? await AsyncStorage.getItem("userData")
+        : await SecureStore.getItemAsync("userData");
+
+        if (userData) {
+          const parsedUserData = JSON.parse(userData);
+          const userId = parsedUserData?.id;
+
+          // Retrieve profiles from AsyncStorage
+          const profilesString = await AsyncStorage.getItem("profile");
+
+          if (profilesString) {
+            const profiles = JSON.parse(profilesString);
+
+            // Find the current user's profile
+            const userProfile = profiles.find(
+              (profile) => profile.id === userId
+            );
+
+            if (userProfile) {
+              console.log("User data retrieved:", userProfile);
+              setCurrentUser(userProfile);
+
+              // Set admin status (adjust this logic based on how you determine admin)
+              setIsAdmin(
+                parsedUserData?.admin === true || userProfile.admin === true
+              );
+            }
+          }
         }
       } catch (error) {
         console.error("Error retrieving data:", error);
@@ -123,6 +147,7 @@ const Profile = () => {
     </SafeAreaView>
   );
 };
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -217,6 +242,7 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "bold",
   },
+  
 });
 
 export default Profile;

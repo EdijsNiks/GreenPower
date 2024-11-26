@@ -23,11 +23,12 @@ import AddItemToWarehouse from "../screens/Warehouse/AddItemToWarehouse";
 import AddItemToProject from "../screens/Projects/AddItemToProject";
 import AddSpotToWarehouse from "../screens/Warehouse/AddSpotToWarehouse";
 import WarehouseSpots from "../components/WarehouseSpots";
-import { AuthContext } from "../../GreenPower/AuthContext";
+import { AuthContext } from "../AuthContext";
 
 const StackNavigation = () => {
   const Stack = createNativeStackNavigator();
   const Tab = createBottomTabNavigator();
+  
   const { userToken, loading } = useContext(AuthContext);
   if (loading) {
     return <View />;
@@ -101,9 +102,8 @@ const StackNavigation = () => {
     );
   }
 
-  // Linking configuration
   const linking = {
-    prefixes: ["https://myapp.vercel.app", "myapp://"],
+    prefixes: ["https://myapp.vercel.app", "myapp://"],  // Remove the undefined makeUrl call
     config: {
       screens: {
         Login: "login",
@@ -116,7 +116,6 @@ const StackNavigation = () => {
               path: "projects",
               screens: {
                 ProjectsHome: "",
-                //  ProjectsInfo: "item-info",
                 AddItemToProject: "add-item",
               },
             },
@@ -124,21 +123,22 @@ const StackNavigation = () => {
               path: "warehouse",
               screens: {
                 WarehouseHome: "",
-                // WarehouseItemInfo: "item-info",
                 AddItemToWarehouse: "add-item",
               },
             },
             Profile: "profile",
           },
         },
-        Profile: "profile",
         ProjectsInfo: "projects/item-info",
         AdminPage: "admin",
         ViewAll: "view-all",
         WarehouseItemInfo: "warehouse/item-info",
+        AddSpotToWarehouse: "warehouse/add-spot",
+        WarehouseSpots: "warehouse/spots",
       },
     },
   };
+  
 
   // Stack navigation with linking
   return (

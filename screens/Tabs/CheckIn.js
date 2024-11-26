@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useState, useEffect } from "react";
+import React, { useState, useEffect, useLayoutEffect } from "react";
 import {
   SafeAreaView,
   View,
@@ -7,12 +7,13 @@ import {
   StyleSheet,
   Dimensions,
   TouchableOpacity,
+  Platform
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import CustomAlert from "../../components/CheckInComp/CustomAlert";
 import { useTranslation } from "react-i18next";
-import i18next, { languageResources } from "../../services/i18next";
+import * as SecureStore from "expo-secure-store";
 
 const { width } = Dimensions.get("window");
 
@@ -20,78 +21,120 @@ const CheckIn = () => {
   const navigation = useNavigation();
   const { t } = useTranslation();
 
-  const [profile, setProfile] = useState(null);
+  // State to store profiles and current user profile
+  const [profiles, setProfiles] = useState([]);
+  const [currentProfile, setCurrentProfile] = useState(null);
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
 
-  // Load user profile data from AsyncStorage on mount
   useEffect(() => {
-    loadProfileData();
+    const loadUserProfiles = async () => {
+      try {
+        // Retrieve user data (platform-specific logic)
+        const userData = Platform.OS === "web"
+          ? await AsyncStorage.getItem("userData")
+          : await SecureStore.getItemAsync("userData");
+
+        if (userData) {
+          const parsedUserData = JSON.parse(userData);
+          const userId = parsedUserData?.id;
+
+          if (userId) {
+            // Retrieve profiles
+            const storedProfilesString = await AsyncStorage.getItem("profile");
+            let existingProfiles = [];
+
+            if (storedProfilesString) {
+              try {
+                existingProfiles = JSON.parse(storedProfilesString);
+              } catch (jsonError) {
+                console.error("Error parsing profiles data:", jsonError);
+              }
+            }
+
+            // Find or create the current user's profile
+            let currentUserProfile = existingProfiles.find(
+              (profile) => profile.id === userId
+            );
+
+            if (!currentUserProfile) {
+              currentUserProfile = {
+                id: userId,
+                name: parsedUserData?.name || "User",
+                checkedIn: false,
+                checkedInTime: null,
+                totalTimeCheckedIn: 0,
+                currentMonthCheckIns: 0,
+                firstCheckInTime: null,
+                lastCheckInTime: null,
+                lastCheckOutTime: null,
+              };
+
+              existingProfiles.push(currentUserProfile);
+            }
+
+            setProfiles(existingProfiles);
+            setCurrentProfile(currentUserProfile);
+          } else {
+            console.log("User ID not found in userData.");
+          }
+        } else {
+          console.log("No user data found.");
+        }
+      } catch (error) {
+        console.error("Error loading user data:", error);
+      }
+    };
+
+    loadUserProfiles();
   }, []);
 
-  // Set up a midnight auto-checkout timer if the user is checked in
-  useEffect(() => {
-    if (profile?.checkedIn) {
-      const now = new Date();
-      const midnight = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate() + 1, // Next day at 00:00
-        0,
-        0,
-        0
+  const saveProfilesData = async (updatedProfiles) => {
+    try {
+      // Update profiles in AsyncStorage
+      await AsyncStorage.setItem("profile", JSON.stringify(updatedProfiles));
+
+      // Update local state
+      setProfiles(updatedProfiles);
+
+      // Find and update the current profile
+      const updatedCurrentProfile = updatedProfiles.find(
+        (profile) => profile.id === currentProfile.id
       );
-      const timeUntilMidnight = midnight - now;
-
-      const timer = setTimeout(() => {
-        handleMidnightCheckOut();
-      }, timeUntilMidnight);
-
-      return () => clearTimeout(timer); // Clear timeout if component unmounts
-    }
-  }, [profile]);
-
-  const loadProfileData = async () => {
-    try {
-      const storedProfile = await AsyncStorage.getItem("profile");
-      if (storedProfile) {
-        setProfile(JSON.parse(storedProfile));
-      }
+      setCurrentProfile(updatedCurrentProfile);
     } catch (error) {
-      console.error("Error loading profile data:", error);
+      console.error("Error saving profiles data:", error);
     }
   };
-
-  const saveProfileData = async (updatedProfile) => {
-    try {
-      await AsyncStorage.setItem("profile", JSON.stringify(updatedProfile));
-      setProfile(updatedProfile);
-    } catch (error) {
-      console.error("Error saving profile data:", error);
-    }
-  };
-
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerShown: false,
-    });
-  }, [navigation]);
 
   const handleCheckIn = async () => {
-    if (profile && profile.checkedIn) {
-      // Show confirmation before checking out
+    if (!currentProfile) return;
+
+    if (currentProfile.checkedIn) {
       setAlertMessage(t("reallyWantToCheckOut"));
       setShowConfirm(true);
       setAlertVisible(true);
     } else {
       const now = new Date();
+
+      // Create updated profile
       const updatedProfile = {
-        ...profile,
+        ...currentProfile,
         checkedIn: true,
         checkedInTime: now.toISOString(),
+        firstCheckInTime: currentProfile.firstCheckInTime || now.toISOString(),
+        lastCheckInTime: now.toISOString(),
+        currentMonthCheckIns: (currentProfile.currentMonthCheckIns || 0) + 1,
       };
-      await saveProfileData(updatedProfile);
+
+      // Create updated profiles array
+      const updatedProfiles = profiles.map((profile) =>
+        profile.id === currentProfile.id ? updatedProfile : profile
+      );
+
+      await saveProfilesData(updatedProfiles);
+
       setAlertMessage(t("checkIn"));
       setShowConfirm(false);
       setAlertVisible(true);
@@ -99,54 +142,69 @@ const CheckIn = () => {
   };
 
   const handleCheckOut = async () => {
-    if (profile) {
-      const now = new Date();
-      const timeSpent = calculateTotalTime(
-        new Date(profile.checkedInTime),
-        now
-      );
-      const updatedProfile = {
-        ...profile,
-        checkedIn: false,
-        checkedInTime: null,
-        totalTime: (profile.totalTime || 0) + timeSpent,
-      };
-      await saveProfileData(updatedProfile);
+    if (!currentProfile) return;
 
-      const checkInFormatted = formatDateTime(new Date(profile.checkedInTime));
-      const checkOutFormatted = formatDateTime(now);
+    const now = new Date();
+    const checkInTime = new Date(currentProfile.checkedInTime);
+    const timeSpent = calculateTotalTime(checkInTime, now);
 
-      setAlertMessage(  t('checkoutMessage', {
+    // Create updated profile
+    const updatedProfile = {
+      ...currentProfile,
+      checkedIn: false,
+      checkedInTime: null,
+      totalTimeCheckedIn: (currentProfile.totalTimeCheckedIn || 0) + timeSpent,
+      lastCheckOutTime: now.toISOString(),
+    };
+
+    // Create updated profiles array
+    const updatedProfiles = profiles.map((profile) =>
+      profile.id === currentProfile.id ? updatedProfile : profile
+    );
+
+    await saveProfilesData(updatedProfiles);
+
+    const checkInFormatted = formatDateTime(checkInTime);
+    const checkOutFormatted = formatDateTime(now);
+
+    setAlertMessage(
+      t("checkoutMessage", {
         startTime: checkInFormatted,
         endTime: checkOutFormatted,
         timeSpent: timeSpent.toFixed(2),
-      }));
-      setShowConfirm(false);
-      setAlertVisible(true);
-    }
+      })
+    );
+    setShowConfirm(false);
+    setAlertVisible(true);
   };
 
   const handleMidnightCheckOut = async () => {
-    if (profile?.checkedIn) {
-      const now = new Date();
-      const timeSpent = calculateTotalTime(
-        new Date(profile.checkedInTime),
-        now
-      );
-      const updatedProfile = {
-        ...profile,
-        checkedIn: false,
-        checkedInTime: null,
-        totalTime: (profile.totalTime || 0) + timeSpent,
-      };
-      await saveProfileData(updatedProfile);
+    if (!currentProfile || !currentProfile.checkedIn) return;
 
-      console.log("User has been automatically checked out at midnight.");
-    }
+    const now = new Date();
+    const checkInTime = new Date(currentProfile.checkedInTime);
+    const timeSpent = calculateTotalTime(checkInTime, now);
+
+    // Create updated profile
+    const updatedProfile = {
+      ...currentProfile,
+      checkedIn: false,
+      checkedInTime: null,
+      totalTimeCheckedIn: (currentProfile.totalTimeCheckedIn || 0) + timeSpent,
+      lastCheckOutTime: now.toISOString(),
+    };
+
+    // Create updated profiles array
+    const updatedProfiles = profiles.map((profile) =>
+      profile.id === currentProfile.id ? updatedProfile : profile
+    );
+
+    await saveProfilesData(updatedProfiles);
+    console.log("User has been automatically checked out at midnight.");
   };
 
   const calculateTotalTime = (start, end) => {
-    return (end - start) / 1000 / 60; // Time spent in minutes
+    return (end - start) / 1000 / 60;
   };
 
   const formatDateTime = (date) => {
@@ -160,7 +218,8 @@ const CheckIn = () => {
     return date.toLocaleDateString(undefined, options);
   };
 
-  if (!profile) {
+  // Render loading state
+  if (!currentProfile) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.navbar}>
@@ -185,17 +244,21 @@ const CheckIn = () => {
       </View>
 
       <View style={styles.profileContainer}>
-        <Text style={styles.profileText}>{profile.name}</Text>
+        <Text style={styles.profileText}>{currentProfile.name}</Text>
         <Text style={styles.checkInText}>{t("checkInToWork")}</Text>
 
         <TouchableOpacity
           style={
-            profile.checkedIn ? styles.checkedInButton : styles.checkInButton
+            currentProfile.checkedIn
+              ? styles.checkedInButton
+              : styles.checkInButton
           }
           onPress={handleCheckIn}
         >
           <Text style={styles.buttonText}>
-            {profile.checkedIn ? t("pressToCheckOut") : t("pressToCheckIn")}
+            {currentProfile.checkedIn
+              ? t("pressToCheckOut")
+              : t("pressToCheckIn")}
           </Text>
         </TouchableOpacity>
       </View>
@@ -210,6 +273,7 @@ const CheckIn = () => {
     </SafeAreaView>
   );
 };
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,

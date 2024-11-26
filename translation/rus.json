@@ -195,5 +195,6 @@
   "photosUpdatedSuccessfully": "Фотографии обновлены успешно!",
   "editDescription": "Редактировать описание",
   "cannotAddSameItemTwice": "Нельзя добавлять один и тот же товар дважды",
-  "reservedCount": "Количество зарезервированных"
+  "reservedCount": "Количество зарезервированных",
+  "action": "Действие"
 }

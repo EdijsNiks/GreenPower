@@ -133,8 +133,8 @@
   "addPhotosComingSoon": "Fotogrāfiju pievienošanas funkcionalitāte drīzumā",
   "addPhotos": "Pievienot fotogrāfijas",
   "noPhotosAvailable": "Fotogrāfijas nav pieejamas",
-  "editInfo": "Rediģēt informāciju",
-  "reserveItem": "Rezervēt vienumu",
+  "editInfo": "Rediģēt",
+  "reserveItem": "Rezervēt",
   "selectProject": "Izvēlēties projektu",
   "enterQuantity": "Ievadīt daudzumu",
   "enterQuantityToReserve": "Ievadīt rezervējamo daudzumu",
@@ -155,7 +155,7 @@
   "spot_no_description": "Apraksts nav pieejams",
   "items_in_spot": "Vienumi vietā",
   "no_items_in_spot": "Nav vienumu šajā vietā",
-  "add_item": "Pievienot vienumu",
+  "add_item": "+ Prece",
   "save_close": "Saglabāt un aizvērt",
   "search_items": "Meklēt vienumus...",
   "no_items_available": "Nav pieejamu vienumu",
@@ -195,6 +195,7 @@
 "photosUpdatedSuccessfully": "Fotogrāfijas atjauninātas!",
 "editDescription": "Rediģāt aprakstu",
 "cannotAddSameItemTwice": "Nevar pievienot vienumu divas reizes",
-"reservedCount": "Rezervācijas daudzums"
+"reservedCount": "Rezervācijas daudzums",
+"action": "Darbība"
 
   }

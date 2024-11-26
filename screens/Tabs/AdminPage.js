@@ -1,54 +1,77 @@
-import React, { useState, useLayoutEffect } from 'react';
-import { StyleSheet, Text, View, Image, SafeAreaView, Dimensions, Pressable, FlatList, TouchableOpacity } from "react-native";
+import React, { useState, useEffect } from "react";
+import {
+  StyleSheet,
+  Text,
+  View,
+  Image,
+  SafeAreaView,
+  Dimensions,
+  Pressable,
+  FlatList,
+  TouchableOpacity,
+  Platform
+} from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import DateTimePickerModal from 'react-native-modal-datetime-picker';
-import { format } from 'date-fns';
+import DateTimePickerModal from "react-native-modal-datetime-picker";
+import { format } from "date-fns";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from 'expo-secure-store';
 
 const { width } = Dimensions.get("window");
 import { useTranslation } from "react-i18next";
-
 
 const AdminPage = () => {
   const navigation = useNavigation();
   const { t } = useTranslation();
 
-
-  // Date picker state for history filtering
-  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedDate, setSelectedDate] = useState("");
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
-
-  // Filter state for checked-in users
   const [showCheckedInOnly, setShowCheckedInOnly] = useState(false);
+  const [profiles, setProfiles] = useState([]);
+  const [historyData, setHistoryData] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
 
-  // Sample admin history data
-  const historyData = [
-    { id: '1', user: 'User 1', action: 'added new task', description: '"Create something"', date: '20.09.2024' },
-    { id: '2', user: 'User 2', action: 'edited warehouse item', description: '"Metal testtest" - took off 2 from count', date: '21.09.2024' },
-    { id: '3', user: 'User 2', action: 'edited warehouse item', description: '"Metal testtest" - took off 2 from count', date: '21.09.2024' },
-    { id: '4', user: 'User 2', action: 'edited warehouse item', description: '"Metal testtest" - took off 2 from count', date: '22.09.2024' },
-    { id: '5', user: 'User 2', action: 'edited warehouse item', description: '"Metal testtest" - took off 2 from count', date: '22.09.2024' },
-    { id: '6', user: 'User 2', action: 'edited warehouse item', description: '"Metal testtest" - took off 2 from count', date: '23.09.2024' },
-    { id: '7', user: 'User 2', action: 'edited warehouse item', description: '"Metal testtest" - took off 2 from count', date: '23.09.2024' },
+  useEffect(() => {
+    const loadAdminData = async () => {
+      try {
+        // Retrieve current user data from SecureStore
+        const userData = Platform.OS === "web"
+        ? await AsyncStorage.getItem("userData")
+        : await SecureStore.getItemAsync("userData");
+        
+        if (userData) {
+          const parsedUserData = JSON.parse(userData);
+          setCurrentUser(parsedUserData);
+        }
 
-  ];
+        // Retrieve profiles from AsyncStorage
+        const profilesString = await AsyncStorage.getItem('profile');
+        
+        if (profilesString) {
+          const parsedProfiles = JSON.parse(profilesString);
+          setProfiles(parsedProfiles);
+          console.log("All Profiles:", parsedProfiles);
+        }
 
-  // Sample user check-in data
-  const userData = [
-    { id: '1', name: 'User 1', checkedIn: true },
-    { id: '2', name: 'User 2', checkedIn: false },
-    { id: '3', name: 'User 3', checkedIn: true },
-    { id: '4', name: 'User 4', checkedIn: false },
-  ];
+        // Load history
+        const storedHistory = await AsyncStorage.getItem("userHistory");
+        const history = storedHistory ? JSON.parse(storedHistory) : [];
+        setHistoryData(history);
+      } catch (error) {
+        console.error("Error loading admin data:", error);
+      }
+    };
 
-  // History Date Filtering using `date-fns`
+    loadAdminData();
+  }, []);
+
   const handleConfirm = (date) => {
-    setSelectedDate(format(date, 'dd.MM.yyyy'));
+    setSelectedDate(format(date, "dd.MM.yyyy"));
     setDatePickerVisibility(false);
   };
 
-  // Render for history items
   const renderHistoryItem = ({ item }) => {
-    if (selectedDate && item.date !== selectedDate) return null; // Filter by selected date
+    if (selectedDate && item.date !== selectedDate) return null;
     return (
       <View style={styles.itemBox}>
         <Text style={styles.listItem}>
@@ -59,71 +82,122 @@ const AdminPage = () => {
     );
   };
 
-  // Render for users
   const renderUserItem = ({ item }) => {
-    if (showCheckedInOnly && !item.checkedIn) return null; // Filter by checked-in status
+    if (showCheckedInOnly && !item.checkedIn) return null;
     return (
       <View style={styles.itemBox}>
         <Text style={styles.listItem}>
-          {item.name} - {item.checkedIn ? t('checkedIn') : t('notCheckedIn')}
+          {item.name} - {item.email || 'No email'} -
+          {item.checkedIn ? t("checkedIn") : t("notCheckedIn")}
         </Text>
         <View style={styles.separator} />
       </View>
     );
   };
-  
+
+  // Filter for admin access
+  const isAdmin = currentUser?.admin === true ;
+
+  if (!isAdmin) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.navbar}>
+          <Image source={require("../../assets/logo1.png")} style={styles.logo} />
+          <Text style={styles.screenName}>{t("adminPage")}</Text>
+        </View>
+        <View style={styles.noAccessContainer}>
+          <Text style={styles.noAccessText}>{t("noAdminAccess")}</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Navbar */}
       <View style={styles.navbar}>
         <Image source={require("../../assets/logo1.png")} style={styles.logo} />
-        <Text style={styles.screenName}>{t('adminPage')}</Text>
+        <Text style={styles.screenName}>{t("adminPage")}</Text>
       </View>
-  
-      {/* Back Button */}
+
       <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
-        <Text style={styles.buttonText}>{t('backToProfile')}</Text>
+        <Text style={styles.buttonText}>{t("backToProfile")}</Text>
       </Pressable>
-  
-      {/* Users Section with View All Button */}
+
+      {/* Users Section */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.listTitle}>{t('users')}</Text>
-          <TouchableOpacity 
-            onPress={() => navigation.navigate('ViewAll', { type: 'users', data: userData })} 
+          <Text style={styles.listTitle}>{t("users")}</Text>
+          <TouchableOpacity
+            onPress={() => 
+              navigation.navigate("ViewAll", {
+                type: "users",
+                userData: profiles,
+              })
+            }
             style={styles.viewAllButton}
           >
-            <Text style={styles.viewAllText}>{t('viewAll')}</Text>
+            <Text style={styles.viewAllText}>{t("viewAll")}</Text>
           </TouchableOpacity>
         </View>
-        <FlatList
-          style={styles.listContainer}
-          data={userData}
-          keyExtractor={item => item.id}
-          renderItem={renderUserItem}
-        />
+        
+        {/* Filters */}
+        <View style={styles.filterContainer}>
+          <TouchableOpacity 
+            onPress={() => setShowCheckedInOnly(!showCheckedInOnly)}
+            style={styles.filterButton}
+          >
+            <Text style={styles.filterButtonText}>
+              {showCheckedInOnly ? t("showAll") : t("showCheckedInOnly")}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={() => setDatePickerVisibility(true)}
+            style={styles.filterButton}
+          >
+            <Text style={styles.filterButtonText}>
+              {selectedDate ? selectedDate : t("filterByDate")}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {profiles.length === 0 ? (
+          <Text>{t("noUsersFound")}</Text>
+        ) : (
+          <FlatList
+            style={styles.listContainer}
+            data={profiles}
+            keyExtractor={(item) => item.id || Math.random().toString()}
+            renderItem={renderUserItem}
+          />
+        )}
       </View>
-  
-      {/* History Section with View All Button */}
+
+      {/* History Section */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.listTitle}>{t('history')}</Text>
-          <TouchableOpacity 
-            onPress={() => navigation.navigate('ViewAll', { type: 'history', data: historyData })} 
+          <Text style={styles.listTitle}>{t("history")}</Text>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("ViewAll", { 
+              type: "history",
+              historyData: historyData 
+            })}
             style={styles.viewAllButton}
           >
-            <Text style={styles.viewAllText}>{t('viewAll')}</Text>
+            <Text style={styles.viewAllText}>{t("viewAll")}</Text>
           </TouchableOpacity>
         </View>
-        <FlatList
-          style={styles.listContainer}
-          data={historyData}
-          keyExtractor={item => item.id}
-          renderItem={renderHistoryItem}
-        />
+        {historyData.length === 0 ? (
+          <Text>{t("noHistoryFound")}</Text>
+        ) : (
+          <FlatList
+            style={styles.listContainer}
+            data={historyData}
+            keyExtractor={(item) => item.id || Math.random().toString()}
+            renderItem={renderHistoryItem}
+          />
+        )}
       </View>
-      
-      {/* Date Picker Modal */}
+
       <DateTimePickerModal
         isVisible={isDatePickerVisible}
         mode="date"
@@ -133,14 +207,15 @@ const AdminPage = () => {
     </SafeAreaView>
   );
 };
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "white",
   },
   section: {
-    flex: 1, 
-    justifyContent: 'flex-start',
+    flex: 1,
+    justifyContent: "flex-start",
   },
   navbar: {
     position: "absolute",
@@ -179,21 +254,21 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
     marginTop: 20,
   },
   listTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   viewAllButton: {
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   viewAllText: {
-    color: '#A4D337',
+    color: "#A4D337",
     fontSize: 16,
   },
   listContainer: {
@@ -201,13 +276,13 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   itemBox: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     padding: 16,
     borderRadius: 8,
     marginBottom: 12,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderWidth: 1,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -215,19 +290,42 @@ const styles = StyleSheet.create({
   },
   listItem: {
     fontSize: 16,
-    color: '#333',
+    color: "#333",
   },
   separator: {
     marginTop: 12,
     height: 1,
-    backgroundColor: '#ddd',
+    backgroundColor: "#ddd",
   },
   buttonText: {
     color: "white",
     fontWeight: "bold",
   },
+  filterContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    paddingHorizontal: 10,
+  },
+  filterButton: {
+    backgroundColor: '#f0f0f0',
+    padding: 10,
+    borderRadius: 5,
+  },
+  filterButtonText: {
+    color: '#333',
+  },
+  noAccessContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  noAccessText: {
+    fontSize: 18,
+    color: 'red',
+    textAlign: 'center',
+  },
 });
 
 export default AdminPage;
-
-
