@@ -47,19 +47,22 @@ const AddItemToProject = () => {
   };
 
   const handleSaveProject = async () => {
+    // Validate required fields
     if (!projectName || !description) {
       Alert.alert(t("errorTitle"), t("errorMessage"));
       return;
     }
-
+  
     try {
+      // Process photos
       const processedPhotos = await Promise.all(
         photos.map(async (photo) => {
           const localUri = await savePhotoToFileSystem(photo.uri);
           return { uri: localUri };
         })
       );
-
+  
+      // Create new project object
       const newProject = {
         id: uuidv4(),
         name: projectName,
@@ -70,32 +73,44 @@ const AddItemToProject = () => {
         reserved,
         dateCreated: new Date().toLocaleString(),
       };
-
-      const storedProjects = await AsyncStorage.getItem("projects");
-      const projects = storedProjects ? JSON.parse(storedProjects) : [];
-      projects.push(newProject);
-      await AsyncStorage.setItem("projects", JSON.stringify(projects));
-
+  
+      // Send item to API
+      const response = await fetch("http://192.168.8.101:5000/api/project", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newProject),
+      });
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || t("saveError"));
+      }
+  
+      // Show success alert and navigate
       Alert.alert(t("successTitle"), t("successMessage"), [
         {
           text: t("ok"),
           onPress: () => {
+            // Reset form fields
             setProjectName("");
             setDescription("");
             setCategoryName("");
             setReserved([]);
             setPhotos([]);
-
+  
+            // Navigate to Projects screen with a flag to fetch new data
             navigation.navigate("Main", {
               screen: "Projects",
-              params: { newProject },
+              params: { shouldRefreshProjects: true },
             });
           },
         },
       ]);
     } catch (error) {
       console.error("Error saving project:", error);
-      Alert.alert(t("errorTitle"), t("saveError"));
+      Alert.alert(t("errorTitle"), error.message || t("saveError"));
     }
   };
 
@@ -137,7 +152,11 @@ const AddItemToProject = () => {
             >
               <Picker.Item label={t("selectCategory")} value="" />
               {categories.map((cat) => (
-                <Picker.Item key={cat} label={cat} value={cat} />
+                <Picker.Item
+                  key={cat.id || cat.name}
+                  label={cat.name}
+                  value={cat.name}
+                />
               ))}
             </Picker>
           </View>
@@ -201,7 +220,6 @@ const styles = StyleSheet.create({
   inputContainer: {
     marginTop: 150,
     paddingHorizontal: 20,
-    
   },
   input: {
     borderWidth: 1,
@@ -286,6 +304,6 @@ const styles = StyleSheet.create({
   lineSeparator: {
     height: 10,
   },
-  });
+});
 
 export default AddItemToProject;

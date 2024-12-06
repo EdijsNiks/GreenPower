@@ -11,11 +11,11 @@ import {
   TouchableOpacity,
   Platform
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { format } from "date-fns";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as SecureStore from 'expo-secure-store';
+import * as SecureStore from "expo-secure-store";
 
 const { width } = Dimensions.get("window");
 import { useTranslation } from "react-i18next";
@@ -29,41 +29,42 @@ const AdminPage = () => {
   const [showCheckedInOnly, setShowCheckedInOnly] = useState(false);
   const [profiles, setProfiles] = useState([]);
   const [historyData, setHistoryData] = useState([]);
-  const [currentUser, setCurrentUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+
+      // Retrieve profiles from AsyncStorage or SecureStore
+      const profilesString = await AsyncStorage.getItem("profile");
+
+      if (profilesString) {
+        const parsedProfiles = JSON.parse(profilesString);
+        setProfiles(parsedProfiles);
+      }
+
+      // Load history
+      const storedHistory = await AsyncStorage.getItem("userHistory");
+      const history = storedHistory ? JSON.parse(storedHistory) : [];
+      setHistoryData(history);
+
+    } catch (error) {
+      console.error("Error loading data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadAdminData = async () => {
-      try {
-        // Retrieve current user data from SecureStore
-        const userData = Platform.OS === "web"
-        ? await AsyncStorage.getItem("userData")
-        : await SecureStore.getItemAsync("userData");
-        
-        if (userData) {
-          const parsedUserData = JSON.parse(userData);
-          setCurrentUser(parsedUserData);
-        }
-
-        // Retrieve profiles from AsyncStorage
-        const profilesString = await AsyncStorage.getItem('profile');
-        
-        if (profilesString) {
-          const parsedProfiles = JSON.parse(profilesString);
-          setProfiles(parsedProfiles);
-          console.log("All Profiles:", parsedProfiles);
-        }
-
-        // Load history
-        const storedHistory = await AsyncStorage.getItem("userHistory");
-        const history = storedHistory ? JSON.parse(storedHistory) : [];
-        setHistoryData(history);
-      } catch (error) {
-        console.error("Error loading admin data:", error);
-      }
-    };
-
-    loadAdminData();
+    loadData();
   }, []);
+
+  // Add focus effect to reload data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadData();
+    }, [])
+  );
 
   const handleConfirm = (date) => {
     setSelectedDate(format(date, "dd.MM.yyyy"));
@@ -87,7 +88,7 @@ const AdminPage = () => {
     return (
       <View style={styles.itemBox}>
         <Text style={styles.listItem}>
-          {item.name} - {item.email || 'No email'} -
+          {item.name} - {item.email || "No email"} -
           {item.checkedIn ? t("checkedIn") : t("notCheckedIn")}
         </Text>
         <View style={styles.separator} />
@@ -95,18 +96,16 @@ const AdminPage = () => {
     );
   };
 
-  // Filter for admin access
-  const isAdmin = currentUser?.admin === true ;
-
-  if (!isAdmin) {
+  // Loading state
+  if (isLoading) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.navbar}>
           <Image source={require("../../assets/logo1.png")} style={styles.logo} />
           <Text style={styles.screenName}>{t("adminPage")}</Text>
         </View>
-        <View style={styles.noAccessContainer}>
-          <Text style={styles.noAccessText}>{t("noAdminAccess")}</Text>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>{t("loading")}</Text>
         </View>
       </SafeAreaView>
     );
@@ -128,7 +127,7 @@ const AdminPage = () => {
         <View style={styles.sectionHeader}>
           <Text style={styles.listTitle}>{t("users")}</Text>
           <TouchableOpacity
-            onPress={() => 
+            onPress={() =>
               navigation.navigate("ViewAll", {
                 type: "users",
                 userData: profiles,
@@ -139,10 +138,10 @@ const AdminPage = () => {
             <Text style={styles.viewAllText}>{t("viewAll")}</Text>
           </TouchableOpacity>
         </View>
-        
+
         {/* Filters */}
         <View style={styles.filterContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => setShowCheckedInOnly(!showCheckedInOnly)}
             style={styles.filterButton}
           >
@@ -150,7 +149,7 @@ const AdminPage = () => {
               {showCheckedInOnly ? t("showAll") : t("showCheckedInOnly")}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => setDatePickerVisibility(true)}
             style={styles.filterButton}
           >
@@ -177,10 +176,12 @@ const AdminPage = () => {
         <View style={styles.sectionHeader}>
           <Text style={styles.listTitle}>{t("history")}</Text>
           <TouchableOpacity
-            onPress={() => navigation.navigate("ViewAll", { 
-              type: "history",
-              historyData: historyData 
-            })}
+            onPress={() =>
+              navigation.navigate("ViewAll", {
+                type: "history",
+                historyData: historyData,
+              })
+            }
             style={styles.viewAllButton}
           >
             <Text style={styles.viewAllText}>{t("viewAll")}</Text>

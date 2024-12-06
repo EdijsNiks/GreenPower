@@ -17,7 +17,6 @@ const FilterModalWarehouse = ({
   selectedCategories,
   handleFilter,
   clearSelection,
-  categories,
   screenType,
   updateCategories,
 }) => {
@@ -25,35 +24,89 @@ const FilterModalWarehouse = ({
   const [newCategory, setNewCategory] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
   const categoriesPerPage = 6;
+  const [categories, setCategories] = useState([]);
 
-  // Auto-reset to first page when categories reduce
+  // Fetch categories on component mount
   useEffect(() => {
-    if (categories.length <= 6) {
-      setCurrentPage(0);
-    }
-  }, [categories]);
+    const fetchCategories = async () => {
+      try {
+        const storageKey =
+          screenType === "projects" ? "categoriesProjects" : "categories";
+
+        // First, try to get from AsyncStorage
+        const storedCategories = await AsyncStorage.getItem(storageKey);
+        if (storedCategories) {
+          const parsedCategories = JSON.parse(storedCategories);
+          setCategories(parsedCategories);
+        }
+
+        // Then fetch from API to sync
+        const apiEndpoint =
+          screenType === "projects"
+            ? "http://192.168.8.101:5000/api/projectCategory"
+            : "http://192.168.8.101:5000/api/warehouseCategory";
+
+        const response = await fetch(apiEndpoint);
+        if (!response.ok) throw new Error("Failed to fetch categories");
+
+        const apiCategories = await response.json();
+
+        // Update storage and state with full category objects
+        await AsyncStorage.setItem(storageKey, JSON.stringify(apiCategories));
+        setCategories(apiCategories);
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+        Alert.alert(t("error"), t("errorFetchingCategories"));
+      }
+    };
+
+    fetchCategories();
+  }, [screenType]);
 
   const addCategory = async () => {
     if (newCategory.trim() === "") return;
 
     try {
-      let updatedCategories;
       const storageKey =
         screenType === "projects" ? "categoriesProjects" : "categories";
-
       const existingCategories = await AsyncStorage.getItem(storageKey);
       const parsedCategories = existingCategories
         ? JSON.parse(existingCategories)
         : [];
 
-      if (!parsedCategories.includes(newCategory)) {
-        updatedCategories = [...parsedCategories, newCategory];
+      // Check if category name already exists
+      const categoryExists = parsedCategories.some(
+        (cat) => cat.name === newCategory
+      );
 
+      if (!categoryExists) {
+        const apiEndpoint =
+          screenType === "projects"
+            ? "http://192.168.8.101:5000/api/projectCategory"
+            : "http://192.168.8.101:5000/api/warehouseCategory";
+
+        // Make POST request to add category
+        const response = await fetch(apiEndpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: newCategory }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to add category to server");
+        }
+
+        const newCategoryData = await response.json();
+
+        // Update local storage with full category object
+        const updatedCategories = [...parsedCategories, newCategoryData];
         await AsyncStorage.setItem(
           storageKey,
           JSON.stringify(updatedCategories)
         );
-        updateCategories(updatedCategories);
+
+        // Update categories state
+        setCategories(updatedCategories);
         setNewCategory("");
       } else {
         Alert.alert(t("categoryExists"), t("categoryAlreadyPresent"));
@@ -64,7 +117,7 @@ const FilterModalWarehouse = ({
     }
   };
 
-  const confirmDeleteCategory = (categoryToDelete) => {
+  const confirmDeleteCategory = (categoryName) => {
     Alert.alert(
       t("deleteCategory"),
       t("confirmDeleteCategory"),
@@ -76,14 +129,14 @@ const FilterModalWarehouse = ({
         {
           text: t("delete"),
           style: "destructive",
-          onPress: () => deleteCategory(categoryToDelete),
+          onPress: () => deleteCategory(categoryName),
         },
       ],
       { cancelable: true }
     );
   };
 
-  const deleteCategory = async (categoryToDelete) => {
+  const deleteCategory = async (categoryName) => {
     try {
       const storageKey =
         screenType === "projects" ? "categoriesProjects" : "categories";
@@ -93,23 +146,47 @@ const FilterModalWarehouse = ({
         ? JSON.parse(existingCategories)
         : [];
 
+        const apiEndpoint = 
+        screenType === "projects"
+          ? `http://192.168.8.101:5000/api/projectCategory/${categoryName}`
+          : `http://192.168.8.101:5000/api/warehouseCategory/${categoryName}`;
+      
+      // Delete by ID
+      const deleteResponse = await fetch(apiEndpoint, {
+        method: "DELETE",
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name: categoryName })
+      });
+      
+
+      if (!deleteResponse.ok) {
+        const errorText = await deleteResponse.text();
+        console.error("Server error response:", errorText);
+        throw new Error("Failed to delete category from server");
+      }
+
+      // Update local storage and state
       const updatedCategories = parsedCategories.filter(
-        (cat) => cat !== categoryToDelete
+        (cat) => cat.name !== categoryName
       );
 
       await AsyncStorage.setItem(storageKey, JSON.stringify(updatedCategories));
-      updateCategories(updatedCategories);
+      setCategories(updatedCategories);
     } catch (error) {
       console.error("Error deleting category:", error);
-      Alert.alert(t("error"), t("errorDeletingCategory"));
+      Alert.alert(t("error"), t("failedToDeleteCategory"));
     }
   };
 
   // Paginate categories
-  const paginatedCategories = categories.slice(
-    currentPage * categoriesPerPage,
-    (currentPage + 1) * categoriesPerPage
-  );
+  const paginatedCategories = categories.length > 0 
+  ? categories.slice(
+      currentPage * categoriesPerPage,
+      (currentPage + 1) * categoriesPerPage
+    )
+  : [];
 
   // Calculate total number of pages
   const totalPages = Math.ceil(categories.length / categoriesPerPage);
@@ -119,7 +196,6 @@ const FilterModalWarehouse = ({
       <View style={styles.modalContainer}>
         <View style={styles.modalContent}>
           <Text style={styles.modalTitle}>{t("selectCategory")}</Text>
-
           {/* New category input and add button */}
           <View style={styles.addCategoryContainer}>
             <TextInput
@@ -135,31 +211,29 @@ const FilterModalWarehouse = ({
               <Text style={styles.addCategoryButtonText}>+</Text>
             </TouchableOpacity>
           </View>
-
           {paginatedCategories.map((category) => (
-            <View style={styles.buttonWrapper} key={category}>
+            <View style={styles.buttonWrapper} key={category.id}>
               <TouchableOpacity
                 style={[
                   styles.button,
-                  selectedCategories.includes(category) &&
+                  selectedCategories.includes(category.name) &&
                     styles.selectedButton,
                 ]}
-                onPress={() => handleFilter(category)}
+                onPress={() => handleFilter(category.name)}
               >
-                <Text style={styles.buttonText}>{category}</Text>
+                <Text style={styles.buttonText}>{category.name}</Text>
               </TouchableOpacity>
-              {selectedCategories.includes(category) && (
+              {selectedCategories.includes(category.name) && (
                 <Text style={styles.indicator}>✔</Text>
               )}
               <TouchableOpacity
                 style={styles.deleteButton}
-                onPress={() => confirmDeleteCategory(category)}
+                onPress={() => confirmDeleteCategory(category.name)}
               >
                 <Text style={styles.deleteButtonText}>🗑️</Text>
               </TouchableOpacity>
             </View>
           ))}
-
           {/* Pagination Controls */}
           <View style={styles.paginationContainer}>
             <TouchableOpacity
@@ -191,7 +265,6 @@ const FilterModalWarehouse = ({
               <Text style={styles.paginationButtonText}>{">"}</Text>
             </TouchableOpacity>
           </View>
-
           <View style={styles.buttonRow}>
             <TouchableOpacity
               style={styles.clearButton}

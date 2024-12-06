@@ -16,29 +16,34 @@ import {
   FlatList,
   Modal,
 } from "react-native";
-import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import {
+  useNavigation,
+  useFocusEffect,
+  useRoute,
+} from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import FilterModalWarehouse from "../../components/FilterModalWarehouse";
 import { useTranslation } from "react-i18next";
-import i18next, { languageResources } from "../../services/i18next";
 
 const { width } = Dimensions.get("window");
 
 const Projects = () => {
   const navigation = useNavigation();
   const { t } = useTranslation();
+  const route = useRoute();
 
   const [taskList, setTaskList] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredTaskList, setFilteredTaskList] = useState([]);
   const [isFilterModalVisible, setFilterModalVisible] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState([]);
+  const [tempSelectedCategories, setTempSelectedCategories] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [categories, setCategories] = useState([]); // Categories loaded from AsyncStorage
+  const [categories, setCategories] = useState([]);
   const [originalTaskList, setOriginalTaskList] = useState([]);
 
-  const tasksPerPage = 10;
+  const tasksPerPage = 6;
 
   useEffect(() => {
     fetchCategories();
@@ -55,69 +60,111 @@ const Projects = () => {
     }
   };
 
+  const fetchProjectsFromDB = async () => {
+    try {
+      const response = await fetch("http://192.168.8.101:5000/api/project");
+      if (!response.ok) throw new Error("Failed to fetch projects");
+
+      const projects = await response.json();
+      const sortedProjects = projects.sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      );
+
+      await AsyncStorage.removeItem("projects");
+      await AsyncStorage.setItem("projects", JSON.stringify(sortedProjects));
+
+      setTaskList(sortedProjects);
+      setOriginalTaskList(sortedProjects);
+      
+      // Apply existing filters when refreshing projects
+      applyFilters(sortedProjects, searchQuery, selectedCategories);
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+
+      try {
+        const storedProjects = await AsyncStorage.getItem("projects");
+        if (storedProjects) {
+          const parsedProjects = JSON.parse(storedProjects);
+          setTaskList(parsedProjects);
+          setOriginalTaskList(parsedProjects);
+          
+          // Apply existing filters when loading from storage
+          applyFilters(parsedProjects, searchQuery, selectedCategories);
+        }
+      } catch (storageError) {
+        console.error("Error reading AsyncStorage:", storageError);
+      }
+    }
+  };
+
+  // New function to centralize filtering logic
+  const applyFilters = (projects, query, categories) => {
+    let filteredData = projects;
+
+    // Apply category filter
+    if (categories.length > 0) {
+      filteredData = filteredData.filter((task) =>
+        categories.some((category) => task.category === category)
+      );
+    }
+
+    // Apply search query filter
+    if (query) {
+      filteredData = filteredData.filter(
+        (task) =>
+          task.name && task.name.toLowerCase().includes(query.toLowerCase())
+      );
+    }
+
+    setFilteredTaskList(filteredData);
+    setCurrentPage(1);
+  };
+
   useFocusEffect(
     useCallback(() => {
-      const loadProjects = async () => {
-        try {
-          const storedProjects = await AsyncStorage.getItem("projects");
-          if (storedProjects) {
-            const parsedProjects = JSON.parse(storedProjects);
-            console.log(
-              "Projects data retrieved from AsyncStorage:",
-              parsedProjects
-            );
-            setTaskList(parsedProjects);
-            setOriginalTaskList(parsedProjects); // Set the original task list
+      const shouldRefresh = route.params?.shouldRefreshProjects;
+
+      if (shouldRefresh) {
+        navigation.setParams({ shouldRefreshProjects: false });
+        fetchProjectsFromDB();
+      } else {
+        const loadProjects = async () => {
+          try {
+            const storedProjects = await AsyncStorage.getItem("projects");
+            if (storedProjects) {
+              const parsedProjects = JSON.parse(storedProjects);
+              setTaskList(parsedProjects);
+              setOriginalTaskList(parsedProjects);
+              
+              // Apply existing filters when loading projects
+              applyFilters(parsedProjects, searchQuery, selectedCategories);
+            } else {
+              fetchProjectsFromDB();
+            }
+          } catch (error) {
+            console.error("Error loading projects:", error);
+            fetchProjectsFromDB();
           }
-        } catch (error) {
-          console.error("Error loading projects data:", error);
-        }
-      };
-
-      loadProjects();
-    }, [])
+        };
+        loadProjects();
+      }
+    }, [route.params?.shouldRefreshProjects, searchQuery, selectedCategories])
   );
-
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerShown: false,
-    });
-  }, [navigation]);
 
   const handleSearch = (text) => {
     setSearchQuery(text);
-
-    if (text === "") {
-      setFilteredTaskList(taskList);
-    } else {
-      const filteredData = taskList.filter((task) =>
-        task.name ? task.name.toLowerCase().includes(text.toLowerCase()) : false
-      );
-      setFilteredTaskList(filteredData);
-    }
+    applyFilters(originalTaskList, text, selectedCategories);
   };
-  const handleCategoryFilter = (categories) => {
-    setSelectedCategories(categories);
-    let filteredData = [];
-    if (categories.length > 0) {
-      filteredData = originalTaskList.filter((task) =>
-        categories.includes(task.category)
-      );
-    } else {
-      filteredData = originalTaskList; // Reset if no categories selected
-    }
-    setTaskList(filteredData);
 
-    if (searchQuery === "") {
-      setFilteredTaskList(filteredData);
-    } else {
-      const searchFilteredData = filteredData.filter((task) =>
-        task.name
-          ? task.name.toLowerCase().includes(searchQuery.toLowerCase())
-          : false
-      );
-      setFilteredTaskList(searchFilteredData);
-    }
+  const handleCategoryFilter = (selectedCategory) => {
+    const newSelectedCategories = selectedCategories.includes(selectedCategory)
+      ? selectedCategories.filter((cat) => cat !== selectedCategory)
+      : [...selectedCategories, selectedCategory];
+
+    setSelectedCategories(newSelectedCategories);
+    setTempSelectedCategories(newSelectedCategories);
+
+    applyFilters(originalTaskList, searchQuery, newSelectedCategories);
     setFilterModalVisible(false);
   };
 
@@ -136,26 +183,28 @@ const Projects = () => {
     </TouchableOpacity>
   );
 
-  const totalPages = Math.ceil(taskList.length / tasksPerPage);
-  const currentPageData = (searchQuery ? filteredTaskList : taskList).slice(
+  const totalPages = Math.ceil(filteredTaskList.length / tasksPerPage);
+  const currentPageData = filteredTaskList.slice(
     (currentPage - 1) * tasksPerPage,
     currentPage * tasksPerPage
   );
 
+  const clearSelection = () => {
+    setSelectedCategories([]);
+    setSearchQuery('');
+    setFilteredTaskList(originalTaskList);
+    setFilterModalVisible(false);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Navbar */}
       <View style={styles.navbar}>
         <Image source={require("../../assets/logo1.png")} style={styles.logo} />
         <Text style={styles.screenName}>{t("Projects")}</Text>
       </View>
-
-      {/* Profile Container */}
       <View style={styles.profileContainer}>
         <Text style={styles.profileText}></Text>
       </View>
-
-      {/* Search, Filter, and Add Project */}
       <View style={styles.actionRow}>
         <TouchableOpacity
           style={styles.filterButton}
@@ -176,16 +225,12 @@ const Projects = () => {
           <Text style={styles.addButtonText}>{t("addProject")}</Text>
         </TouchableOpacity>
       </View>
-
-      {/* Task List */}
       <FlatList
         data={currentPageData}
         renderItem={renderTaskItem}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.taskList}
       />
-
-      {/* Pagination */}
       <View style={styles.pagination}>
         <TouchableOpacity
           disabled={currentPage === 1}
@@ -203,21 +248,15 @@ const Projects = () => {
           <Text style={styles.pageButton}>{t("next")}</Text>
         </TouchableOpacity>
       </View>
-      {/* Filter Modal */}
       <FilterModalWarehouse
         isVisible={isFilterModalVisible}
         screenType="projects"
         onClose={() => setFilterModalVisible(false)}
-        categories={categories} // Display loaded categories
+        categories={categories}
         selectedCategories={selectedCategories}
         handleFilter={handleCategoryFilter}
         updateCategories={setCategories}
-        clearSelection={() => {
-          setSelectedCategories([]);
-          setTaskList(originalTaskList); // Use the original task list
-          setFilteredTaskList(originalTaskList); // Reset the filtered task list
-          setFilterModalVisible(false);
-        }}
+        clearSelection={clearSelection}
       />
     </SafeAreaView>
   );
@@ -413,7 +452,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 10,
   },
-  
 });
 
 export default Projects;

@@ -18,7 +18,7 @@ import PhotoPicker from "../../components/PhotoPicker";
 import { v4 as uuidv4 } from "uuid";
 import { Picker } from "@react-native-picker/picker"; // Import picker for dropdown
 import { useTranslation } from "react-i18next";
-
+import axios from "axios";
 
 const { width } = Dimensions.get("window");
 
@@ -35,12 +35,12 @@ const AddItemToWarehouse = () => {
   const [categories, setCategories] = useState([]); // State to store fetched categories
 
   useEffect(() => {
- //saveDefaultCategories(); // Save default categories on mount
+    //saveDefaultCategories(); // Save default categories on mount
     fetchCategories(); // Fetch categories from AsyncStorage on mount
   }, []);
 
   // Save default categories to AsyncStorage if they don't exist
-/*  const saveDefaultCategories = async () => {
+  /*  const saveDefaultCategories = async () => {
     const defaultCategories = ["SCREWS", "BOLTS", "METAL SHEETS", "ETC"];
     try {
       const storedCategories = await AsyncStorage.getItem("categories");
@@ -91,12 +91,14 @@ const AddItemToWarehouse = () => {
   const generateUniqueId = () => uuidv4();
 
   const handleSaveItem = async () => {
+    // Validate required fields
     if (!itemName || !description || !count || !category) {
-      Alert.alert(t('error'), t('missingFields'));
+      Alert.alert(t("error"), t("missingFields"));
       return;
     }
 
     try {
+      // Process photos
       const processedPhotos = await Promise.all(
         photos.map(async (photo) => {
           const localUri = await savePhotoToFileSystem(photo.uri);
@@ -104,6 +106,7 @@ const AddItemToWarehouse = () => {
         })
       );
 
+      // Create new item object
       const newItem = {
         id: generateUniqueId(),
         name: itemName,
@@ -112,24 +115,49 @@ const AddItemToWarehouse = () => {
         reserved: reserved,
         category: category,
         photos: processedPhotos,
-        dateCreated: new Date().toLocaleString(),
       };
 
+      // Log the item being sent
+      console.log("Sending item:", newItem);
+
+      // Send item to API using fetch
+      const response = await fetch("http://192.168.8.101:5000/api/warehouse/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newItem),
+      });
+
+      if (!response.ok) {
+        // If response is not ok, throw an error
+        const errorData = await response.json();
+        throw new Error(errorData.message || t("saveError"));
+      }
+
+      const responseData = await response.json();
+      console.log("API Response:", responseData);
+
+      // Update local storage
       const storedItems = await AsyncStorage.getItem("items");
       const items = storedItems ? JSON.parse(storedItems) : [];
-      items.push(newItem);
+      items.push(responseData); // Adding the new item from the response
       await AsyncStorage.setItem("items", JSON.stringify(items));
 
-      Alert.alert(t('success'), t('itemSaved'), [
+      // Show success alert and reset form
+      Alert.alert(t("success"), t("itemSaved"), [
         {
           text: "OK",
           onPress: () => {
+            // Reset form fields
             setItemName("");
             setDescription("");
             setCount("");
             setReserved([]);
             setCategory("");
             setPhotos([]);
+
+            // Navigate back to warehouse
             navigation.navigate("Main", {
               screen: "Warehouse",
               params: { newItem },
@@ -138,8 +166,17 @@ const AddItemToWarehouse = () => {
         },
       ]);
     } catch (error) {
+      // Centralized error handling
       console.error("Error saving item:", error);
-      Alert.alert(t('error'), t('saveError'));
+
+      // Check if it's an error with fetch
+      if (error.message) {
+        // Show error based on fetch request failure
+        Alert.alert(t("error"), error.message);
+      } else {
+        // For other errors
+        Alert.alert(t("error"), t("saveError"));
+      }
     }
   };
 
@@ -147,20 +184,20 @@ const AddItemToWarehouse = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.navbar}>
         <Image source={require("../../assets/logo1.png")} style={styles.logo} />
-        <Text style={styles.screenName}>{t('add_item')}</Text>
+        <Text style={styles.screenName}>{t("add_item")}</Text>
       </View>
 
       <ScrollView>
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder={t('itemName')}
+            placeholder={t("itemName")}
             value={itemName}
             onChangeText={setItemName}
           />
           <TextInput
             style={styles.input}
-            placeholder={t('description')}
+            placeholder={t("description")}
             value={description}
             onChangeText={setDescription}
             multiline
@@ -168,7 +205,7 @@ const AddItemToWarehouse = () => {
           />
           <TextInput
             style={styles.input}
-            placeholder={t('count')}
+            placeholder={t("count")}
             value={count}
             onChangeText={setCount}
             keyboardType="numeric"
@@ -184,9 +221,13 @@ const AddItemToWarehouse = () => {
               onValueChange={(value) => setCategory(value)}
               style={styles.dropdown}
             >
-              <Picker.Item label={t('selectCategory')} value="" />
+              <Picker.Item label={t("selectCategory")} value="" />
               {categories.map((cat) => (
-                <Picker.Item key={cat} label={cat} value={cat} />
+                <Picker.Item
+                  key={cat.id || cat.name}
+                  label={cat.name}
+                  value={cat.name}
+                />
               ))}
             </Picker>
           </View>
@@ -202,10 +243,10 @@ const AddItemToWarehouse = () => {
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.buttonText}>{t('goBack')}</Text>
+            <Text style={styles.buttonText}>{t("goBack")}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.saveButton} onPress={handleSaveItem}>
-            <Text style={styles.buttonText}>{t('saveItem')}</Text>
+            <Text style={styles.buttonText}>{t("saveItem")}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

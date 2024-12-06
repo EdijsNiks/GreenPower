@@ -16,6 +16,7 @@ export const AuthProvider = ({ children }) => {
       try {
         let token;
 
+        // Get the token based on platform (web or mobile)
         if (Platform.OS === "web") {
           token = await AsyncStorage.getItem("userToken");
         } else {
@@ -33,8 +34,14 @@ export const AuthProvider = ({ children }) => {
             userDataString = await SecureStore.getItemAsync("userData");
           }
 
+          // Parse userData only if it exists
           if (userDataString) {
-            setUserData(JSON.parse(userDataString));
+            try {
+              const parsedUserData = JSON.parse(userDataString);
+              setUserData(parsedUserData);
+            } catch (error) {
+              console.error("Failed to parse user data:", error);
+            }
           }
         }
       } catch (error) {
@@ -49,14 +56,17 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (token, userData) => {
     try {
+      // Stringify userData before saving
+      const userDataString = JSON.stringify(userData);
+
       if (Platform.OS === "web") {
         // Save to AsyncStorage for web
         await AsyncStorage.setItem("userToken", token);
-        await AsyncStorage.setItem("userData", JSON.stringify(userData));
+        await AsyncStorage.setItem("userData", userDataString);
       } else {
         // Save securely for mobile
         await SecureStore.setItemAsync("userToken", token);
-        await SecureStore.setItemAsync("userData", JSON.stringify(userData));
+        await SecureStore.setItemAsync("userData", userDataString);
       }
 
       // Update state

@@ -21,6 +21,8 @@ import { useTranslation } from "react-i18next";
 
 const { width } = Dimensions.get("window");
 
+const API_BASE_URL = "http://192.168.8.101:5000/api/project";
+
 const ProjectsInfo = () => {
   const navigation = useNavigation();
   const { t } = useTranslation();
@@ -29,20 +31,31 @@ const ProjectsInfo = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [updatedDescription, setUpdatedDescription] = useState(project.description || "");
+  const [updatedDescription, setUpdatedDescription] = useState(
+    project.description || ""
+  );
   const [projectData, setProjectData] = useState(project);
   const [tempPhotos, setTempPhotos] = useState([]);
   const [projectPhotos, setProjectPhotos] = useState(project.photos || []);
 
   const handleSaveDescription = async () => {
     try {
-      const updatedProject = {
-        ...projectData,
-        description: updatedDescription
-      };
+      // Update project data in the backend
+      const response = await fetch(`${API_BASE_URL}/${project.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: updatedDescription }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update project description.");
+      }
+
+      const updatedProject = await response.json();
+
+      // Update local state and AsyncStorage
       setProjectData(updatedProject);
 
-      // Update the project in AsyncStorage
       const projectsJson = await AsyncStorage.getItem("projects");
       if (projectsJson) {
         const projects = JSON.parse(projectsJson);
@@ -52,7 +65,6 @@ const ProjectsInfo = () => {
         await AsyncStorage.setItem("projects", JSON.stringify(updatedProjects));
       }
 
-      // Also update individual project storage
       await AsyncStorage.setItem(
         `project_${project.id}`,
         JSON.stringify(updatedProject)
@@ -61,10 +73,11 @@ const ProjectsInfo = () => {
       setIsEditing(false);
       Alert.alert(t("success"), t("descriptionUpdatedSuccessfully"));
     } catch (error) {
-      console.error("Error saving updated description:", error);
+      console.error("Error updating description:", error);
       Alert.alert(t("error"), t("failedToUpdateDescription"));
     }
   };
+
   // Save photo to local filesystem and update project
   const handleSavePhoto = async () => {
     if (tempPhotos.length > 0) {
@@ -94,6 +107,19 @@ const ProjectsInfo = () => {
 
         // Save updated project to AsyncStorage
         try {
+          const newPhotoUrls = tempPhotos.map((photo) => photo.uri);
+          console.log(newPhotoUrls);
+
+          const response = await fetch(`${API_BASE_URL}/${project.id}/photos`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ newPhotos: newPhotoUrls }),
+          });
+    
+          if (!response.ok) {
+            throw new Error("Failed to add photos to the project.");
+          }
+
           await AsyncStorage.setItem(
             `project_${project.id}`,
             JSON.stringify(newItem)
@@ -168,6 +194,13 @@ const ProjectsInfo = () => {
         style: "destructive",
         onPress: async () => {
           try {
+            const response = await fetch(`${API_BASE_URL}/${project.id}`, {
+              method: "DELETE",
+            });
+
+            if (!response.ok) {
+              throw new Error("Failed to delete the project.");
+            }
             // 1. Remove project from AsyncStorage
             await AsyncStorage.removeItem(`project_${project.id}`);
 
@@ -288,21 +321,22 @@ const ProjectsInfo = () => {
           >
             <Text style={styles.buttonText}>{t("back")}</Text>
           </TouchableOpacity>
-        {/* Description Edit/Save Button */}
-        <TouchableOpacity
-          style={styles.editButton}
-          onPress={isEditing ? handleSaveDescription : () => setIsEditing(true)}
-        >
-          <Text style={styles.buttonText}>
-            {isEditing ? t("save") : t("editDescription")}
-          </Text>
-        </TouchableOpacity>
+          {/* Description Edit/Save Button */}
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={
+              isEditing ? handleSaveDescription : () => setIsEditing(true)
+            }
+          >
+            <Text style={styles.buttonText}>
+              {isEditing ? t("save") : t("editDescription")}
+            </Text>
+          </TouchableOpacity>
 
           <TouchableOpacity style={styles.finishButton}>
             <Text style={styles.buttonText}>{t("finishProject")}</Text>
           </TouchableOpacity>
         </View>
-
 
         {/* Project Description Section with Edit Functionality */}
         <Text style={styles.sectionTitle}>{t("descriptionProject")}</Text>
@@ -329,15 +363,17 @@ const ProjectsInfo = () => {
             containerStyle={styles.photosSection}
           />
           <View style={styles.photoGallery}>
-            {projectPhotos?.map((photo, index) => (
-              <TouchableOpacity
-                key={index}
-                onPress={() => handleImagePress(photo)}
-              >
-                <Image source={{ uri: photo.uri }} style={styles.photo} />
-              </TouchableOpacity>
-            ))}
+            {Array.isArray(projectPhotos) &&
+              projectPhotos.map((photo, index) => (
+                <TouchableOpacity
+                  key={index}
+                  onPress={() => handleImagePress(photo)}
+                >
+                  <Image source={{ uri: photo.uri }} style={styles.photo} />
+                </TouchableOpacity>
+              ))}
           </View>
+
           {tempPhotos.length > 0 && (
             <TouchableOpacity
               style={styles.saveButton}
@@ -587,60 +623,60 @@ const styles = StyleSheet.create({
   },
   modalBackground: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0,0,0,0.9)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   fullScreenImage: {
-    width: '100%',
-    height: '80%',
+    width: "100%",
+    height: "80%",
   },
   closeButton: {
-    position: 'absolute',
+    position: "absolute",
     top: 40,
     right: 20,
-    backgroundColor: '#A4D337',
+    backgroundColor: "#A4D337",
     borderRadius: 15,
     width: 30,
     height: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     zIndex: 1,
   },
   closeButtonText: {
-    color: 'black',
+    color: "black",
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   descriptionContainer: {
     padding: 15,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: 8,
     marginHorizontal: 15,
     marginBottom: 15,
   },
-  
+
   descriptionInput: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: 4,
     padding: 10,
     minHeight: 100,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
-  
+
   editDescriptionButton: {
-    backgroundColor: '#4a90e2',
+    backgroundColor: "#4a90e2",
     padding: 10,
     borderRadius: 5,
     marginHorizontal: 15,
     marginBottom: 15,
-    alignItems: 'center',
+    alignItems: "center",
   },
-  
+
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginHorizontal: 15,
     marginVertical: 10,
   },

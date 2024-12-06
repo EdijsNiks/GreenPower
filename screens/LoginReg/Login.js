@@ -67,44 +67,28 @@ const Login = () => {
 
   const handleLogin = async () => {
     try {
-      // Retrieve the user profiles from AsyncStorage
-      const userProfilesString = await AsyncStorage.getItem("profile");
-      
-      if (userProfilesString) {
-        let userProfiles;
-        try {
-          // Try to parse as JSON
-          userProfiles = JSON.parse(userProfilesString);
-        } catch (parseError) {
-          console.error("Error parsing user profiles:", parseError);
-          userProfiles = null;
-        }
-        
-        // Ensure userProfiles is an array
-        if (!Array.isArray(userProfiles)) {
-          // If it's an object, convert to array
-          userProfiles = userProfiles ? [userProfiles] : [];
-        }
-        
-        // Find a user that matches the email and password
-        const matchedUser = userProfiles.find(
-          user => user.email === email && user.password === password
-        );
-        
-        if (matchedUser) {
-          login("mockToken", matchedUser);
-          Alert.alert("Welcome!", t("loginSuccess"));
-        } else {
-          Alert.alert("Error", t("invalidEmailorPass"));
-        }
+      const response = await fetch('http://192.168.8.101:5000/api/profile/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+  
+      if (response.ok) {
+        const data = await response.json();
+        login(data.token, data.profile);
+        Alert.alert("Welcome!", t("loginSuccess"));
       } else {
-        Alert.alert("Error", t("noUserProfile"));
+        const errorData = await response.json();
+        Alert.alert("Error", errorData.message || t("invalidEmailorPass"));
       }
     } catch (error) {
-      console.error("Error checking user profile:", error);
+      console.error("Error during login:", error);
       Alert.alert("Error", t("failedToCheck"));
     }
   };
+  
 
   const { width, height } = Dimensions.get("window");
 

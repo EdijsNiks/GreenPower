@@ -59,7 +59,7 @@ const QRCodeScanner = ({ onScanComplete, onClose }) => {
           }}
           onError={(error) => console.error("Scanner Error:", error)}
           scanDelay={300}
-          formats={['qr_code']} // Limit detection to QR codes only
+          formats={['qr_code', 'codabar', 'code_128', 'ean_13']} // Expanded formats
           paused={scanned}
           style={{ width: "100%", height: "100%" }}
         />
@@ -72,13 +72,13 @@ const QRCodeScanner = ({ onScanComplete, onClose }) => {
       <CameraView
         onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
         barcodeScannerSettings={{
-          barcodeTypes: ["qr", "pdf417"],
+          barcodeTypes: ["qr", "pdf417", "code128", "ean13"], // Added more barcode types
         }}
         style={StyleSheet.absoluteFillObject}
       />
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {

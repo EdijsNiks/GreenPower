@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   SafeAreaView,
   View,
@@ -7,7 +7,7 @@ import {
   StyleSheet,
   Dimensions,
   TouchableOpacity,
-  Platform
+  Platform,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -21,148 +21,147 @@ const CheckIn = () => {
   const navigation = useNavigation();
   const { t } = useTranslation();
 
-  // State to store profiles and current user profile
-  const [profiles, setProfiles] = useState([]);
+  // State to store current user profile
   const [currentProfile, setCurrentProfile] = useState(null);
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
-    const loadUserProfiles = async () => {
+    const loadUserData = async () => {
       try {
-        // Retrieve user data (platform-specific logic)
-        const userData = Platform.OS === "web"
-          ? await AsyncStorage.getItem("userData")
-          : await SecureStore.getItemAsync("userData");
+        const storedUserData =
+          Platform.OS === "web"
+            ? await AsyncStorage.getItem("userData")
+            : await SecureStore.getItemAsync("userData");
 
-        if (userData) {
-          const parsedUserData = JSON.parse(userData);
-          const userId = parsedUserData?.id;
-
-          if (userId) {
-            // Retrieve profiles
-            const storedProfilesString = await AsyncStorage.getItem("profile");
-            let existingProfiles = [];
-
-            if (storedProfilesString) {
-              try {
-                existingProfiles = JSON.parse(storedProfilesString);
-              } catch (jsonError) {
-                console.error("Error parsing profiles data:", jsonError);
-              }
-            }
-
-            // Find or create the current user's profile
-            let currentUserProfile = existingProfiles.find(
-              (profile) => profile.id === userId
-            );
-
-            if (!currentUserProfile) {
-              currentUserProfile = {
-                id: userId,
-                name: parsedUserData?.name || "User",
-                checkedIn: false,
-                checkedInTime: null,
-                totalTimeCheckedIn: 0,
-                currentMonthCheckIns: 0,
-                firstCheckInTime: null,
-                lastCheckInTime: null,
-                lastCheckOutTime: null,
-              };
-
-              existingProfiles.push(currentUserProfile);
-            }
-
-            setProfiles(existingProfiles);
-            setCurrentProfile(currentUserProfile);
-          } else {
-            console.log("User ID not found in userData.");
-          }
-        } else {
-          console.log("No user data found.");
+        if (storedUserData) {
+          const parsedUserData = JSON.parse(storedUserData);
+          setCurrentProfile(parsedUserData);
+          console.log("User Data:", parsedUserData);
         }
       } catch (error) {
         console.error("Error loading user data:", error);
       }
     };
 
-    loadUserProfiles();
+    loadUserData();
   }, []);
 
-  const saveProfilesData = async (updatedProfiles) => {
+  const updateProfileData = async (updatedProfileData) => {
     try {
-      // Update profiles in AsyncStorage
-      await AsyncStorage.setItem("profile", JSON.stringify(updatedProfiles));
+      // Update userData in storage
+      const storageMethod =
+        Platform.OS === "web" ? AsyncStorage.setItem : SecureStore.setItemAsync;
+
+      await storageMethod("userData", JSON.stringify(updatedProfileData));
+      await syncProfileWithBackend(updatedProfileData);
 
       // Update local state
-      setProfiles(updatedProfiles);
-
-      // Find and update the current profile
-      const updatedCurrentProfile = updatedProfiles.find(
-        (profile) => profile.id === currentProfile.id
-      );
-      setCurrentProfile(updatedCurrentProfile);
+      setCurrentProfile(updatedProfileData);
     } catch (error) {
-      console.error("Error saving profiles data:", error);
+      console.error("Error updating profile data:", error);
+    }
+  };
+  const getAuthToken = async () => {
+    try {
+      const token = await AsyncStorage.getItem("userToken");
+      return token;
+    } catch (error) {
+      console.error("Error retrieving token:", error);
+      return null;
+    }
+  };
+  const syncProfileWithBackend = async (updatedProfileData) => {
+    try {
+      const response = await fetch(
+        `http://192.168.8.101:5000/api/profile/${updatedProfileData.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${await getAuthToken()}`,
+          },
+          body: JSON.stringify(updatedProfileData),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Profile sync failed");
+      }
+
+      const responseData = await response.json();
+      console.log("Profile synced successfully:", responseData);
+
+      // Update local storage and state
+      const storageMethod =
+        Platform.OS === "web" ? AsyncStorage.setItem : SecureStore.setItemAsync;
+      await storageMethod("userData", JSON.stringify(updatedProfileData));
+      setCurrentProfile(updatedProfileData);
+
+      return responseData;
+    } catch (error) {
+      console.error("Error syncing profile:", error);
+      throw error;
     }
   };
 
   const handleCheckIn = async () => {
     if (!currentProfile) return;
 
+    const now = new Date();
+
     if (currentProfile.checkedIn) {
       setAlertMessage(t("reallyWantToCheckOut"));
       setShowConfirm(true);
       setAlertVisible(true);
-    } else {
-      const now = new Date();
-
-      // Create updated profile
-      const updatedProfile = {
-        ...currentProfile,
-        checkedIn: true,
-        checkedInTime: now.toISOString(),
-        firstCheckInTime: currentProfile.firstCheckInTime || now.toISOString(),
-        lastCheckInTime: now.toISOString(),
-        currentMonthCheckIns: (currentProfile.currentMonthCheckIns || 0) + 1,
-      };
-
-      // Create updated profiles array
-      const updatedProfiles = profiles.map((profile) =>
-        profile.id === currentProfile.id ? updatedProfile : profile
-      );
-
-      await saveProfilesData(updatedProfiles);
-
-      setAlertMessage(t("checkIn"));
-      setShowConfirm(false);
-      setAlertVisible(true);
+      return;
     }
+
+    const updatedProfile = {
+      ...currentProfile,
+      checkedIn: true,
+      checkedInTime: now.toISOString(),
+      firstCheckInTime: currentProfile.firstCheckInTime || now.toISOString(),
+      lastCheckInTime: now.toISOString(),
+      currentMonthCheckIns: (currentProfile.currentMonthCheckIns || 0) + 1,
+      monthlyCheckIns: {
+        ...(currentProfile.monthlyCheckIns || {}),
+        [now.getFullYear()]: {
+          ...(currentProfile.monthlyCheckIns?.[now.getFullYear()] || {}),
+          [now.getMonth() + 1]:
+            (currentProfile.monthlyCheckIns?.[now.getFullYear()]?.[
+              now.getMonth() + 1
+            ] || 0) + 1,
+        },
+      },
+      lastUpdated: now.toISOString(),
+    };
+    await updateProfileData(updatedProfile);
+
+    setAlertMessage(t("checkIn"));
+    setShowConfirm(false);
+    setAlertVisible(true);
   };
 
   const handleCheckOut = async () => {
-    if (!currentProfile) return;
+    if (!currentProfile || !currentProfile.checkedIn) return;
 
     const now = new Date();
     const checkInTime = new Date(currentProfile.checkedInTime);
     const timeSpent = calculateTotalTime(checkInTime, now);
 
-    // Create updated profile
+    // Prepare updated profile data for checkout
     const updatedProfile = {
       ...currentProfile,
       checkedIn: false,
       checkedInTime: null,
       totalTimeCheckedIn: (currentProfile.totalTimeCheckedIn || 0) + timeSpent,
       lastCheckOutTime: now.toISOString(),
+      lastUpdated: now.toISOString(),
     };
 
-    // Create updated profiles array
-    const updatedProfiles = profiles.map((profile) =>
-      profile.id === currentProfile.id ? updatedProfile : profile
-    );
-
-    await saveProfilesData(updatedProfiles);
+    await updateProfileData(updatedProfile);
 
     const checkInFormatted = formatDateTime(checkInTime);
     const checkOutFormatted = formatDateTime(now);
@@ -178,33 +177,8 @@ const CheckIn = () => {
     setAlertVisible(true);
   };
 
-  const handleMidnightCheckOut = async () => {
-    if (!currentProfile || !currentProfile.checkedIn) return;
-
-    const now = new Date();
-    const checkInTime = new Date(currentProfile.checkedInTime);
-    const timeSpent = calculateTotalTime(checkInTime, now);
-
-    // Create updated profile
-    const updatedProfile = {
-      ...currentProfile,
-      checkedIn: false,
-      checkedInTime: null,
-      totalTimeCheckedIn: (currentProfile.totalTimeCheckedIn || 0) + timeSpent,
-      lastCheckOutTime: now.toISOString(),
-    };
-
-    // Create updated profiles array
-    const updatedProfiles = profiles.map((profile) =>
-      profile.id === currentProfile.id ? updatedProfile : profile
-    );
-
-    await saveProfilesData(updatedProfiles);
-    console.log("User has been automatically checked out at midnight.");
-  };
-
   const calculateTotalTime = (start, end) => {
-    return (end - start) / 1000 / 60;
+    return (end - start) / 1000 / 60; // Convert to minutes
   };
 
   const formatDateTime = (date) => {

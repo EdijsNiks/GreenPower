@@ -105,111 +105,36 @@ const Registration = () => {
   const handleRegister = async () => {
     if (validateFields()) {
       const userProfile = {
-        id: uuidv4(),
         name,
         email,
         password,
         admin,
-        checkedIn: false,
-        checkedInTime: null,
-        firstCheckInTime: null,
-        lastCheckInTime: null,
-        totalTimeCheckedIn: 0,
-        monthlyCheckIns: {}, // Object to track check-ins by month
-        currentMonthCheckIns: 0,
       };
-
+  
       try {
-        // Retrieve existing user profiles
-        const existingUserProfiles = await AsyncStorage.getItem("profile");
-
-        // Initialize profiles as an empty array if not exists or not parseable
-        let profiles = [];
-        try {
-          if (existingUserProfiles) {
-            const parsedProfiles = JSON.parse(existingUserProfiles);
-            profiles = Array.isArray(parsedProfiles)
-              ? parsedProfiles
-              : [parsedProfiles];
-          }
-        } catch (parseError) {
-          console.error("Error parsing existing profiles:", parseError);
-        }
-
-        // Check for existing email to prevent duplicate registrations
-        const emailExists = profiles.some(
-          (profile) =>
-            profile.email && profile.email.toLowerCase() === email.toLowerCase()
-        );
-
-        if (emailExists) {
-          Alert.alert("Error", t("emailAlreadyRegistered"));
-          return;
-        }
-
-        // Add new user profile
-        profiles.push(userProfile);
-
-        // Save the updated profiles
-        await AsyncStorage.setItem("profile", JSON.stringify(profiles));
-
-        // Prepare history entry
-        const historyEntry = {
-          id: Date.now().toString(),
-          user: userProfile.name,
-          action: "Profile Created",
-          description: "New user registered",
-          date: Date.now().toString(),
-        };
-
-        // Handle user history
-        const existingHistory = await AsyncStorage.getItem("userHistory");
-        let history = [];
-        try {
-          if (existingHistory) {
-            const parsedHistory = JSON.parse(existingHistory);
-            history = Array.isArray(parsedHistory)
-              ? parsedHistory
-              : [parsedHistory];
-          }
-        } catch (parseError) {
-          console.error("Error parsing existing history:", parseError);
-        }
-
-        history.push(historyEntry);
-
-        await AsyncStorage.setItem("userHistory", JSON.stringify(history));
-        // Success alert and navigation
-        if (Platform.OS === "web") {
-          window.alert(t("registerSuccess"));
-          navigation.replace("Login");
+        const response = await fetch('http://192.168.8.101:5000/api/profile', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(userProfile),
+        });
+  
+        if (response.ok) {
+          Alert.alert("Success", t("registerSuccess"), [
+            { text: "OK", onPress: () => navigation.replace("Login") },
+          ]);
         } else {
-          Alert.alert(
-            "Success",
-            t("registerSuccess"),
-            [
-              {
-                text: "OK",
-                onPress: () => navigation.replace("Login"),
-              },
-            ],
-            { cancelable: false }
-          );
+          const errorData = await response.json();
+          Alert.alert("Error", errorData.message || t("failedSave"));
         }
       } catch (error) {
-        if (Platform.OS === "web") {
-          window.alert(t("failedSave"));
-        } else {
-          Alert.alert(
-            "Error",
-            t("failedSave"),
-            [{ text: "OK" }],
-            { cancelable: true }
-          );
-        }
-      }  
+        console.error("Error during registration:", error);
+        Alert.alert("Error", t("failedSave"));
+      }
     }
   };
+  
   return (
     <SafeAreaView
       style={{ flex: 1, backgroundColor: "white", alignItems: "center" }}

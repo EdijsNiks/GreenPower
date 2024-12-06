@@ -6,103 +6,82 @@ import {
   Image,
   StyleSheet,
   Pressable,
-  Dimensions,
-  Platform
+  Platform,
+  Dimensions
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
-import { useIsFocused } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
 import { useTranslation } from "react-i18next";
-import { AuthContext } from "../../AuthContext"; // Adjust the import path as needed
+import { AuthContext } from "../../AuthContext";
+
 const { width } = Dimensions.get("window");
+
 const Profile = () => {
   const navigation = useNavigation();
   const { t } = useTranslation();
-  const isFocused = useIsFocused();
 
-  const [currentUser, setCurrentUser] = useState(null);
+  const [userData, setUserData] = useState(null);
   const [isPressed, setIsPressed] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
 
   const { logout } = useContext(AuthContext);
 
-  useEffect(() => {
-    /////////// Fetch User Data ///////////
-    const fetchUserData = async () => {
-      try {
-        // Retrieve user data from SecureStore
-        const userData = Platform.OS === "web"
+  const fetchUserData = async () => {
+    try {
+      // Retrieve user data from SecureStore
+      const storedUserData = Platform.OS === "web"
         ? await AsyncStorage.getItem("userData")
         : await SecureStore.getItemAsync("userData");
 
-        if (userData) {
-          const parsedUserData = JSON.parse(userData);
-          const userId = parsedUserData?.id;
-
-          // Retrieve profiles from AsyncStorage
-          const profilesString = await AsyncStorage.getItem("profile");
-
-          if (profilesString) {
-            const profiles = JSON.parse(profilesString);
-
-            // Find the current user's profile
-            const userProfile = profiles.find(
-              (profile) => profile.id === userId
-            );
-
-            if (userProfile) {
-              console.log("User data retrieved:", userProfile);
-              setCurrentUser(userProfile);
-
-              // Set admin status (adjust this logic based on how you determine admin)
-              setIsAdmin(
-                parsedUserData?.admin === true || userProfile.admin === true
-              );
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Error retrieving data:", error);
+      if (storedUserData) {
+        const parsedUserData = JSON.parse(storedUserData);
+        console.log("Parsed User Data:", parsedUserData);
+        setUserData(parsedUserData);
       }
-    };
-
-    // Fetch user data whenever the screen is focused
-    if (isFocused) {
-      fetchUserData();
+    } catch (error) {
+      console.error("Error retrieving data:", error);
     }
-  }, [isFocused]);
+  };
+
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  // Add this to refresh data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchUserData();
+    }, [])
+  );
 
   useLayoutEffect(() => {
-    /////////// Hide Header ///////////
+    // Hide Header
     navigation.setOptions({
       headerShown: false,
     });
   }, [navigation]);
 
   const handleLogout = () => {
-    /////////// Logout Functionality ///////////
     logout();
   };
 
   const handleAdminPage = () => {
-    /////////// Navigate to Admin Page ///////////
     navigation.navigate("AdminPage");
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/*///////// Navbar //////////*/}
+      {/* Navbar */}
       <View style={styles.navbar}>
         <Image source={require("../../assets/logo1.png")} style={styles.logo} />
         <Text style={styles.screenName}>{t("profile")}</Text>
       </View>
 
-      {/*///////// Profile Container //////////*/}
+      {/* Profile Container */}
       <View style={styles.profileContainer}>
-        {currentUser ? (
+        {userData ? (
           <>
-            <Text style={styles.profileText}>{currentUser.name}</Text>
+            <Text style={styles.profileText}>{userData.name}</Text>
 
             {/* Check-in Status */}
             <View style={styles.checkInContainer}>
@@ -110,12 +89,21 @@ const Profile = () => {
               <Text
                 style={[
                   styles.checkInStatus,
-                  { color: currentUser.checkedIn ? "green" : "red" },
+                  { color: userData.checkedIn ? "green" : "red" },
                 ]}
               >
-                {currentUser.checkedIn ? t("yes") : t("no")}
+                {userData.checkedIn ? t("yes") : t("no")}
               </Text>
             </View>
+
+            {/* Additional Check-in Details */}
+            {userData.checkedInTime && (
+              <View style={styles.checkInDetailsContainer}>
+                <Text style={styles.checkInDetailsText}>
+                  {t("checkInTime")}: {new Date(userData.checkedInTime).toLocaleString()}
+                </Text>
+              </View>
+            )}
 
             {/* Logout Button */}
             <Pressable
@@ -134,7 +122,7 @@ const Profile = () => {
             </Pressable>
 
             {/* Admin Button */}
-            {isAdmin && (
+            {userData.admin === true && (
               <Pressable onPress={handleAdminPage} style={styles.adminButton}>
                 <Text style={styles.adminButtonText}>{t("admin")}</Text>
               </Pressable>
@@ -241,6 +229,16 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: "white",
     fontWeight: "bold",
+  },
+  checkInDetailsContainer: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 5,
+  },
+  checkInDetailsText: {
+    fontSize: 14,
+    marginBottom: 5,
   },
   
 });

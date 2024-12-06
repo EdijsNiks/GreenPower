@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -43,10 +43,10 @@ const WarehouseItemInfo = () => {
       // Combine existing photos with new ones
       const updatedPhotos = [...(itemDetails.photos || []), ...tempPhotos];
       const updatedItem = { ...itemDetails, photos: updatedPhotos };
-      
+
       // Update local state
       setItemDetails(updatedItem);
-      
+
       // Update AsyncStorage
       const warehouseItemsJson = await AsyncStorage.getItem("items");
       if (warehouseItemsJson) {
@@ -56,10 +56,10 @@ const WarehouseItemInfo = () => {
         );
         await AsyncStorage.setItem("items", JSON.stringify(updatedItems));
       }
-      
+
       // Clear temp photos
       setTempPhotos([]);
-      
+
       Alert.alert(t("success"), t("photosUpdatedSuccessfully"));
     } catch (error) {
       console.error("Error saving photos:", error);
@@ -69,16 +69,24 @@ const WarehouseItemInfo = () => {
 
   const getProjectReservations = () => {
     return projects.reduce((acc, project) => {
-      const reservation = project.reserved?.find(
-        (item) => item.itemId === itemDetails.id
-      );
-      if (reservation) {
-        acc.push({
-          projectId: project.id,
-          projectTitle: project.name,
-          count: parseInt(reservation.count),
-        });
-      }
+      // Safely handle reserved array or undefined
+      const reservations = Array.isArray(project.reserved)
+        ? project.reserved.filter(
+            (reservation) =>
+              reservation && reservation.itemId === itemDetails.id
+          )
+        : [];
+
+      reservations.forEach((reservation) => {
+        if (reservation) {
+          acc.push({
+            projectId: project.id,
+            projectTitle: project.name,
+            count: parseInt(reservation.count || 0),
+          });
+        }
+      });
+
       return acc;
     }, []);
   };
@@ -106,21 +114,26 @@ const WarehouseItemInfo = () => {
     }
   };
 
-  React.useEffect(() => {
-    loadProjects();
-  }, []);
-
   const loadProjects = async () => {
     try {
       const storedProjects = await AsyncStorage.getItem("projects");
       if (storedProjects) {
-        const parsedProjects = JSON.parse(storedProjects);
+        const parsedProjects = JSON.parse(storedProjects).map((project) => ({
+          ...project,
+          // Ensure reserved is always an array
+          reserved: Array.isArray(project.reserved)
+            ? project.reserved.filter((r) => r && r.itemId)
+            : [],
+        }));
         setProjects(parsedProjects);
 
+        // Safely get initial reserved project IDs
         const initialReservedIds = parsedProjects.reduce((acc, project) => {
-          const hasReservation = project.reserved?.some(
-            (item) => item.itemId === itemDetails.id
-          );
+          const hasReservation =
+            Array.isArray(project.reserved) &&
+            project.reserved.some(
+              (item) => item && item.itemId === itemDetails.id
+            );
           if (hasReservation) {
             acc.push(project.id);
           }
@@ -134,12 +147,23 @@ const WarehouseItemInfo = () => {
     }
   };
 
+  // Use effect to load projects
+  useEffect(() => {
+    loadProjects();
+  }, []);
+
   const getTotalReservedForItem = (itemId, projectsData) => {
     return projectsData.reduce((sum, project) => {
-      const reservation = project.reserved?.find(
-        (item) => item.itemId === itemId
-      );
-      return sum + (reservation ? parseInt(reservation.count) : 0);
+      // Safely handle reserved array or undefined
+      if (Array.isArray(project.reserved)) {
+        const itemReservation = project.reserved.find(
+          (item) => item && item.itemId === itemId
+        );
+        return (
+          sum + (itemReservation ? parseInt(itemReservation.count || 0) : 0)
+        );
+      }
+      return sum;
     }, 0);
   };
 
@@ -202,12 +226,13 @@ const WarehouseItemInfo = () => {
       return;
     }
 
-    const projectReservation = projects
-      .find((project) => project.id === selectedProject.id)
-      ?.reserved?.find((item) => item.itemId === itemDetails.id);
+    // Safely find project reservation
+    const projectReservation = (selectedProject.reserved || []).find(
+      (item) => item && item.itemId === itemDetails.id
+    );
 
     const existingReservedCount = projectReservation
-      ? parseInt(projectReservation.count)
+      ? parseInt(projectReservation.count || 0)
       : 0;
 
     if (reserveAmount >= itemDetails.count) {
@@ -218,19 +243,30 @@ const WarehouseItemInfo = () => {
     try {
       const updatedProjects = projects.map((project) => {
         if (project.id === selectedProject.id) {
-          const existingReservation = project.reserved?.find(
-            (item) => item.itemId === itemDetails.id
+          // Ensure reserved is an array
+          const currentReserved = Array.isArray(project.reserved)
+            ? project.reserved
+            : [];
+
+          // Find existing reservation or create new
+          const existingReservationIndex = currentReserved.findIndex(
+            (item) => item && item.itemId === itemDetails.id
           );
+
           let newReserved;
-          if (existingReservation) {
-            newReserved = project.reserved.map((item) =>
-              item.itemId === itemDetails.id
-                ? { ...item, count: parseInt(item.count) + reserveAmount }
-                : item
-            );
+          if (existingReservationIndex !== -1) {
+            // Update existing reservation
+            newReserved = [...currentReserved];
+            newReserved[existingReservationIndex] = {
+              ...newReserved[existingReservationIndex],
+              count:
+                parseInt(newReserved[existingReservationIndex].count || 0) +
+                reserveAmount,
+            };
           } else {
+            // Add new reservation
             newReserved = [
-              ...(project.reserved || []),
+              ...currentReserved,
               {
                 itemId: itemDetails.id,
                 name: itemDetails.name,
@@ -239,6 +275,7 @@ const WarehouseItemInfo = () => {
               },
             ];
           }
+
           return { ...project, reserved: newReserved };
         }
         return project;
@@ -269,7 +306,6 @@ const WarehouseItemInfo = () => {
       Alert.alert(t("error"), t("failedToReserveItem"));
     }
   };
-
   const handleClearProjectReservation = async (projectId) => {
     Alert.alert(t("clearReservation"), t("whatToDoWithReservation"), [
       { text: t("cancel"), style: "cancel" },
@@ -435,12 +471,11 @@ const WarehouseItemInfo = () => {
             {t("category")}: {itemDetails?.category || t("na")}
           </Text>
           <Text style={styles.itemDetails}>
-            {t("totalCount")}:{" "}
-            {itemDetails?.count || t("na")}
+            {t("totalCount")}: {itemDetails?.count || t("na")}
           </Text>
           <Text style={styles.itemDetails}>
             {t("reservedCount")}:{" "}
-            { getTotalReservedForItem(itemDetails.id, projects) || "0"}
+            {getTotalReservedForItem(itemDetails.id, projects) || "0"}
           </Text>
           <TouchableOpacity
             style={styles.deleteButton}
@@ -509,7 +544,8 @@ const WarehouseItemInfo = () => {
         </View>
 
         <View style={styles.photoGallery}>
-          {itemDetails?.photos && itemDetails.photos.length > 0 ? (
+          {Array.isArray(itemDetails.photos) &&
+          itemDetails.photos.length > 0 ? (
             itemDetails.photos.map((photo, index) => (
               <View key={index} style={styles.photoContainer}>
                 <TouchableOpacity onPress={() => handleImagePress(photo)}>

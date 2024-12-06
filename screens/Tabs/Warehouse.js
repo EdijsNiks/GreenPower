@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback  } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigation } from "@react-navigation/native";
 import {
   Text,
@@ -11,6 +11,7 @@ import {
   Modal,
   Button,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { Camera } from "expo-camera";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
@@ -21,7 +22,7 @@ import QRCodeScanner from "../../components/QRCodeScanner";
 import styles from "../../styles/WarehouseStyles.js";
 import WarehouseSpots from "../../components/WarehouseSpots.js";
 import { useTranslation } from "react-i18next";
-import i18next, { languageResources } from "../../services/i18next";
+import axios from "axios"; // For API calls
 
 const Warehouse = ({ route }) => {
   const navigation = useNavigation();
@@ -36,10 +37,34 @@ const Warehouse = ({ route }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [showScanner, setShowScanner] = useState(false);
   const [hasPermission, setHasPermission] = useState(null);
-  const [categories, setCategories] = useState([]); // Holds categories loaded from AsyncStorage
+  const [categories, setCategories] = useState([]);
+  const [originalTaskList, setOriginalTaskList] = useState([]);
   const tasksPerPage = 10;
   const [savedData, setSavedData] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const applyFilters = (items, query, categories) => {
+    let filteredData = items;
+  
+    // Apply category filter
+    if (categories.length > 0) {
+      filteredData = filteredData.filter((item) =>
+        categories.some((category) => item.category === category)
+      );
+    }
+  
+    // Apply search query filter
+    if (query) {
+      filteredData = filteredData.filter(
+        (item) =>
+          item.name && item.name.toLowerCase().includes(query.toLowerCase())
+      );
+    }
+  
+    setFilteredTaskList(filteredData);
+    setCurrentPage(1); // Reset pagination
+  };
 
   // Load task list and categories from AsyncStorage on component mount
   useEffect(() => {
@@ -48,11 +73,13 @@ const Warehouse = ({ route }) => {
         // Load tasks
         const storedItems = await AsyncStorage.getItem("items");
         if (storedItems) {
-          setTaskList(JSON.parse(storedItems));
-          setFilteredTaskList(JSON.parse(storedItems)); // Initialize filtered list with all items
+          const parsedItems = JSON.parse(storedItems);
+          setTaskList(parsedItems);
+          setOriginalTaskList(parsedItems);
+
+          // Apply existing filters when loading projects
+          applyFilters(parsedItems, searchQuery, selectedCategories);
         }
-        console.log("Task list loaded from AsyncStorage:");
-        console.log(storedItems);
 
         // Load categories
         const storedCategories = await AsyncStorage.getItem("categories");
@@ -69,36 +96,64 @@ const Warehouse = ({ route }) => {
     return unsubscribe;
   }, [navigation]);
 
-  const handleItemUpdate = useCallback(async (updatedItems) => {
-    try {
-      // Get current spots data
-      const spotsData = await AsyncStorage.getItem('spots');
-      let spots = spotsData ? JSON.parse(spotsData) : [];
+  // Handle search with new filtering approach
+  const handleSearch = (text) => {
+    setSearchQuery(text);
+    applyFilters(taskList, text, selectedCategories);
+  };
 
-      // Update the specific spot with new items
-      spots = spots.map(spot => {
-        if (spot.spotId === savedData) {
-          return {
-            ...spot,
-            items: updatedItems.map(item => ({
-              itemId: item.id,
-              count: item.count || 0
-            }))
-          };
-        }
-        return spot;
-      });
+  // Handle category filtering with new approach
+  const handleCategoryFilter = (selectedCategory) => {
+    const newSelectedCategories = selectedCategories.includes(selectedCategory)
+      ? selectedCategories.filter((cat) => cat !== selectedCategory)
+      : [...selectedCategories, selectedCategory];
 
-      // Save updated spots back to storage
-      await AsyncStorage.setItem('spots', JSON.stringify(spots));
-      
-      // Optional: Update any local state if needed
-      //Alert.alert('Success', 'Spot updated successfully');
-    } catch (error) {
-      console.error('Error updating spot:', error);
-      Alert.alert('Error', t("failedToUpdate"));
-    }
-  }, [savedData]);
+    setSelectedCategories(newSelectedCategories);
+    applyFilters(originalTaskList, searchQuery, newSelectedCategories);
+    setFilterModalVisible(false);
+  };
+
+  // Clear all filters
+  const clearSelection = () => {
+    setSelectedCategories([]);
+    setSearchQuery("");
+    setFilteredTaskList(originalTaskList);
+    setFilterModalVisible(false);
+  };
+  
+  const handleItemUpdate = useCallback(
+    async (updatedItems) => {
+      try {
+        // Get current spots data
+        const spotsData = await AsyncStorage.getItem("spots");
+        let spots = spotsData ? JSON.parse(spotsData) : [];
+
+        // Update the specific spot with new items
+        spots = spots.map((spot) => {
+          if (spot.spotId === savedData) {
+            return {
+              ...spot,
+              items: updatedItems.map((item) => ({
+                itemId: item.id,
+                count: item.count || 0,
+              })),
+            };
+          }
+          return spot;
+        });
+
+        // Save updated spots back to storage
+        await AsyncStorage.setItem("spots", JSON.stringify(spots));
+
+        // Optional: Update any local state if needed
+        //Alert.alert('Success', 'Spot updated successfully');
+      } catch (error) {
+        console.error("Error updating spot:", error);
+        Alert.alert("Error", t("failedToUpdate"));
+      }
+    },
+    [savedData]
+  );
   const handleModalClose = (updatedItems) => {
     if (updatedItems) {
       // Update local state
@@ -130,26 +185,6 @@ const Warehouse = ({ route }) => {
     }
   }, [route?.params?.updatedItem]);
 
-  useEffect(() => {
-    if (route?.params?.updatedItem) {
-      const updateItem = async () => {
-        const updatedItems = taskList.map((item) =>
-          item.id === route.params.updatedItem.id
-            ? route.params.updatedItem
-            : item
-        );
-        try {
-          await AsyncStorage.setItem("items", JSON.stringify(updatedItems));
-          setTaskList(updatedItems);
-          setFilteredTaskList(updatedItems); // Refresh filtered list
-        } catch (error) {
-          console.error("Error updating items:", error);
-        }
-      };
-      updateItem();
-    }
-  }, [route?.params?.updatedItem]);
-
   // Request camera permission
   useEffect(() => {
     const requestCameraPermission = async () => {
@@ -171,40 +206,12 @@ const Warehouse = ({ route }) => {
     setModalVisible(true);
     setShowScanner(false);
   };
-  const handleSearch = (text) => {
-    setSearchQuery(text);
-
-    if (text === "") {
-      // Reset to full task list if search is cleared
-      setFilteredTaskList(taskList);
-    } else {
-      // Filter task list based on search query
-      const filteredData = taskList.filter((task) =>
-        task.name ? task.name.toLowerCase().includes(text.toLowerCase()) : false
-      );
-      setFilteredTaskList(filteredData);
-    }
-  };
-
-  // Function to filter by selected categories
-  const handleCategoryFilter = (categories) => {
-    setSelectedCategories(categories);
-    if (categories.length > 0) {
-      const filteredData = taskList.filter((task) =>
-        categories.includes(task.category)
-      );
-      setFilteredTaskList(filteredData);
-    } else {
-      setFilteredTaskList(taskList); // Reset if no categories selected
-    }
-    setFilterModalVisible(false);
-  };
 
   const renderTaskItem = ({ item }) => {
     let backgroundColor;
     if (item.count === 0) {
       backgroundColor = "red"; // Red if count is zero
-    } else if (item.reserved.length > 0 && item.count > 0) {
+    } else if (item.reserved && item.reserved.length > 0 && item.count > 0) {
       backgroundColor = "green"; // Green if item is reserved and has stock
     } else {
       backgroundColor = "#D3D3D3"; // Grey if it has stock but is not reserved
@@ -217,7 +224,9 @@ const Warehouse = ({ route }) => {
       >
         <View style={[styles.taskItem, { backgroundColor }]}>
           <Text style={styles.taskTitle}>{item.name}</Text>
-          <Text>{t("count")}: {item.count}</Text>
+          <Text>
+            {t("count")}: {item.count}
+          </Text>
         </View>
       </TouchableOpacity>
     );
@@ -320,14 +329,10 @@ const Warehouse = ({ route }) => {
         screenType={"warehouse"}
         onClose={() => setFilterModalVisible(false)}
         updateCategories={setCategories}
-        categories={categories} // Display loaded categories
+        categories={categories}
         selectedCategories={selectedCategories}
         handleFilter={handleCategoryFilter}
-        clearSelection={() => {
-          setSelectedCategories([]);
-          setFilteredTaskList(taskList); // Reset filter
-          setFilterModalVisible(false);
-        }}
+        clearSelection={clearSelection}
       />
       <WarehouseSpots
         isVisible={modalVisible}

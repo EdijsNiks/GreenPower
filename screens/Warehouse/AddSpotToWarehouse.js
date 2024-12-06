@@ -8,12 +8,14 @@ import {
   Alert,
   TextInput,
   Image,
-  Dimensions
+  Dimensions,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 const { width } = Dimensions.get("window");
+import "react-native-get-random-values"; // Polyfill for random values
+import { v4 as uuidv4 } from "uuid";
 
 import { useTranslation } from "react-i18next";
 
@@ -25,20 +27,25 @@ const AddSpotToWarehouse = () => {
 
   const saveSpot = async () => {
     if (!spotId || !description) {
-      Alert.alert(t('error'), t('missingFields'));
+      Alert.alert(t("error"), t("missingFields"));
       return;
     }
 
     try {
       // Create new spot object
       const newSpot = {
-        id: Date.now().toString(),
+        id: uuidv4(),
         spotId,
         description,
-        dateCreated: new Date().toISOString(),
         reservedItems: [],
       };
-
+      const response = await fetch("http://192.168.8.101:5000/api/spots", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newSpot),
+      });
       // Get existing spots from storage
       const existingSpots = await AsyncStorage.getItem("spots");
       const spots = existingSpots ? JSON.parse(existingSpots) : [];
@@ -47,20 +54,25 @@ const AddSpotToWarehouse = () => {
       spots.push(newSpot);
       await AsyncStorage.setItem("spots", JSON.stringify(spots));
 
-      Alert.alert(t('success'), t('spotSaved'), [
-        {
-          text: "OK",
-          onPress: () => {
-            setSpotId("");
-            setDescription("");
-            console.log(spots);
-            navigation.goBack();
+      if (response.ok) {
+        Alert.alert(t("success"), t("spotSaved"), [
+          {
+            text: "OK",
+            onPress: () => {
+              setSpotId("");
+              setDescription("");
+              console.log(response);
+              navigation.goBack();
+            },
           },
-        },
-      ]);
+        ]);
+      }else{
+        const errorData = await response.json();
+        Alert.alert(t("error"), errorData.message || t("saveError"));
+      }
     } catch (error) {
       console.error("Error saving spot:", error);
-      Alert.alert(t('error'), t('saveError'));
+      Alert.alert(t("error"), t("saveError"));
     }
   };
 
@@ -68,20 +80,20 @@ const AddSpotToWarehouse = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.navbar}>
         <Image source={require("../../assets/logo1.png")} style={styles.logo} />
-        <Text style={styles.screenName}>{t('addSpot')}</Text>
+        <Text style={styles.screenName}>{t("addSpot")}</Text>
       </View>
 
       <ScrollView>
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder={t('spotId')}
+            placeholder={t("spotId")}
             value={spotId}
             onChangeText={setSpotId}
           />
           <TextInput
             style={styles.input}
-            placeholder={t('description')}
+            placeholder={t("description")}
             value={description}
             onChangeText={setDescription}
             multiline
@@ -93,13 +105,10 @@ const AddSpotToWarehouse = () => {
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.buttonText}>{t('goBack')}</Text>
+            <Text style={styles.buttonText}>{t("goBack")}</Text>
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.saveButton} 
-            onPress={saveSpot}
-          >
-            <Text style={styles.buttonText}>{t('saveSpot')}</Text>
+          <TouchableOpacity style={styles.saveButton} onPress={saveSpot}>
+            <Text style={styles.buttonText}>{t("saveSpot")}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

@@ -55,19 +55,23 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, onSave }) => {
 
       const currentSpot = spots.find((spot) => spot.spotId === spotId) || {
         spotId,
-        items: [],
+        items: [], // Ensure items is always an array
       };
 
       setSpotData(currentSpot);
 
-      const spotItemCounts = {};
-      currentSpot.items.forEach((item) => {
-        spotItemCounts[item.itemId] = item.count;
-      });
-
+      // Ensure items is an array, default to empty array if undefined
       const spotItemsArray = Array.isArray(currentSpot.items)
         ? currentSpot.items
         : [];
+
+      const spotItemCounts = {};
+      spotItemsArray.forEach((item) => {
+        if (item && item.itemId) {
+          spotItemCounts[item.itemId] = item.count;
+        }
+      });
+
       const fullSpotItems = spotItemsArray
         .map((spotItem) => {
           if (!spotItem?.itemId) return null;
@@ -94,13 +98,20 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, onSave }) => {
       });
       setItemCountUpdates(updates);
 
-      const spotItemIds = new Set(spotItemsArray.map((item) => item.itemId));
+      const spotItemIds = new Set(
+        spotItemsArray.map((item) => item?.itemId).filter(Boolean)
+      );
       const availableItems = items.filter((item) => !spotItemIds.has(item.id));
 
       setWarehouseItems(availableItems);
     } catch (error) {
       console.error("Error loading data:", error);
       Alert.alert("Error", "Failed to load spot data");
+      // Reset state to prevent undefined errors
+      setSpotData(null);
+      setSpotItems([]);
+      setWarehouseItems([]);
+      setItemCountUpdates({});
     } finally {
       setLoading(false);
     }
@@ -303,7 +314,9 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, onSave }) => {
             >
               <Text style={styles.itemText}>{item.name}</Text>
               <Text style={styles.itemDescription}>{item.description}</Text>
-              <Text style={styles.count}>{t("count", { count: item.count })}</Text>
+              <Text style={styles.count}>
+                {t("count", { count: item.count })}
+              </Text>
             </TouchableOpacity>
           )}
           ListEmptyComponent={
@@ -328,7 +341,9 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, onSave }) => {
     <View style={styles.itemContainer}>
       <TouchableOpacity style={styles.itemInfo}>
         <Text style={styles.itemText}>{item.name}</Text>
-        <Text style={styles.count}>{t("count")}: {item.count}</Text>
+        <Text style={styles.count}>
+          {t("count")}: {item.count}
+        </Text>
       </TouchableOpacity>
 
       <View style={styles.countControls}>
@@ -369,47 +384,47 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, onSave }) => {
   }
 
   return (
-      <Modal visible={isVisible} animationType="slide" transparent>
-        <View style={styles.modalContainer}>
-          <Text style={styles.modalTitle}>
-            {t("items_in_spot")}: {spotData?.spotId || t("spot_unknown")}
+    <Modal visible={isVisible} animationType="slide" transparent>
+      <View style={styles.modalContainer}>
+        <Text style={styles.modalTitle}>
+          {t("items_in_spot")}: {spotData?.spotId || t("spot_unknown")}
+        </Text>
+        <Text style={styles.modalSubtitle}>
+          {spotData?.description || t("spot_no_description")}
+        </Text>
+
+        <Text style={styles.sectionTitle}>{t("items_in_spot")}</Text>
+
+        <FlatList
+          data={spotItems}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={renderSpotItem}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>{t("no_items_in_spot")}</Text>
+          }
+        />
+
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => setShowItemSelector(true)}
+        >
+          <Text style={styles.buttonText}>{t("add_item")}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.closeButton, hasChanges && styles.saveButton]}
+          onPress={handleSaveAndClose}
+        >
+          <Text style={styles.buttonText}>
+            {hasChanges ? t("save_close") : t("close")}
           </Text>
-          <Text style={styles.modalSubtitle}>
-            {spotData?.description || t("spot_no_description")}
-          </Text>
-  
-          <Text style={styles.sectionTitle}>{t("items_in_spot")}</Text>
-  
-          <FlatList
-            data={spotItems}
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={renderSpotItem}
-            ListEmptyComponent={
-              <Text style={styles.emptyText}>{t("no_items_in_spot")}</Text>
-            }
-          />
-  
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => setShowItemSelector(true)}
-          >
-            <Text style={styles.buttonText}>{t("add_item")}</Text>
-          </TouchableOpacity>
-  
-          <TouchableOpacity
-            style={[styles.closeButton, hasChanges && styles.saveButton]}
-            onPress={handleSaveAndClose}
-          >
-            <Text style={styles.buttonText}>
-              {hasChanges ? t("save_close") : t("close")}
-            </Text>
-          </TouchableOpacity>
-  
-          <ItemSelector />
-        </View>
-      </Modal>
-    );
-  };
+        </TouchableOpacity>
+
+        <ItemSelector />
+      </View>
+    </Modal>
+  );
+};
 
 const styles = StyleSheet.create({
   modalContainer: {
