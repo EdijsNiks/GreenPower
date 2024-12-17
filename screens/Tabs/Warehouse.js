@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import {
   Text,
   View,
@@ -22,7 +22,6 @@ import QRCodeScanner from "../../components/QRCodeScanner";
 import styles from "../../styles/WarehouseStyles.js";
 import WarehouseSpots from "../../components/WarehouseSpots.js";
 import { useTranslation } from "react-i18next";
-import axios from "axios"; // For API calls
 
 const Warehouse = ({ route }) => {
   const navigation = useNavigation();
@@ -46,14 +45,14 @@ const Warehouse = ({ route }) => {
 
   const applyFilters = (items, query, categories) => {
     let filteredData = items;
-  
+
     // Apply category filter
     if (categories.length > 0) {
       filteredData = filteredData.filter((item) =>
         categories.some((category) => item.category === category)
       );
     }
-  
+
     // Apply search query filter
     if (query) {
       filteredData = filteredData.filter(
@@ -61,40 +60,74 @@ const Warehouse = ({ route }) => {
           item.name && item.name.toLowerCase().includes(query.toLowerCase())
       );
     }
-  
+
     setFilteredTaskList(filteredData);
     setCurrentPage(1); // Reset pagination
   };
 
   // Load task list and categories from AsyncStorage on component mount
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        // Load tasks
-        const storedItems = await AsyncStorage.getItem("items");
-        if (storedItems) {
-          const parsedItems = JSON.parse(storedItems);
-          setTaskList(parsedItems);
-          setOriginalTaskList(parsedItems);
+  useFocusEffect(
+    useCallback(() => {
+      const shouldRefresh = route.params?.shouldRefresh;
+      
+      const loadData = async () => {
+        try {
+          // Check if we should refresh or fetch new data
+          if (shouldRefresh) {
+            navigation.setParams({ shouldRefresh: false });
+          }
+  
+          const response = await fetch("http://192.168.8.101:8080/api/warehouse");
+          if (!response.ok)
+            throw new Error("Failed to fetch items from warehouse");
+  
+          const items = await response.json();
 
-          // Apply existing filters when loading projects
-          applyFilters(parsedItems, searchQuery, selectedCategories);
+  
+          // Only update if there are no local updates
+          if (!route?.params?.updatedItem) {
+            await AsyncStorage.removeItem("items");
+            await AsyncStorage.setItem("items", JSON.stringify(items));
+  
+            setTaskList(items);
+            setOriginalTaskList(items);
+  
+            // Apply existing filters
+            applyFilters(items, searchQuery, selectedCategories);
+          }
+        } catch (error) {
+          console.error("Error fetching items:", error);
+          try {
+            // Fallback to locally stored items
+            const storedItems = await AsyncStorage.getItem("items");
+            if (storedItems) {
+              const parsedItems = JSON.parse(storedItems);
+              setTaskList(parsedItems);
+              setOriginalTaskList(parsedItems);
+  
+              // Apply existing filters
+              applyFilters(parsedItems, searchQuery, selectedCategories);
+            }
+          } catch (storageError) {
+            console.error("Error reading items from AsyncStorage:", storageError);
+          }
         }
-
-        // Load categories
-        const storedCategories = await AsyncStorage.getItem("categories");
-        if (storedCategories) {
-          setCategories(JSON.parse(storedCategories));
+  
+        // Load categories from AsyncStorage
+        try {
+          const storedCategories = await AsyncStorage.getItem("categories");
+          if (storedCategories) {
+            setCategories(JSON.parse(storedCategories));
+          }
+        } catch (error) {
+          console.error("Error loading categories:", error);
         }
-      } catch (error) {
-        console.error("Error loading data:", error);
-      }
-    };
+      };
+  
+      loadData();
 
-    const unsubscribe = navigation.addListener("focus", loadData);
-    loadData();
-    return unsubscribe;
-  }, [navigation]);
+    }, [navigation, route.params?.shouldRefresh])
+  );
 
   // Handle search with new filtering approach
   const handleSearch = (text) => {
@@ -120,15 +153,13 @@ const Warehouse = ({ route }) => {
     setFilteredTaskList(originalTaskList);
     setFilterModalVisible(false);
   };
-  
+
   const handleItemUpdate = useCallback(
     async (updatedItems) => {
       try {
-        // Get current spots data
+        // Update local AsyncStorage spots
         const spotsData = await AsyncStorage.getItem("spots");
         let spots = spotsData ? JSON.parse(spotsData) : [];
-
-        // Update the specific spot with new items
         spots = spots.map((spot) => {
           if (spot.spotId === savedData) {
             return {
@@ -141,20 +172,15 @@ const Warehouse = ({ route }) => {
           }
           return spot;
         });
-
-        // Save updated spots back to storage
         await AsyncStorage.setItem("spots", JSON.stringify(spots));
-
-        // Optional: Update any local state if needed
-        //Alert.alert('Success', 'Spot updated successfully');
       } catch (error) {
-        console.error("Error updating spot:", error);
+        console.error("Error updating spot and items:", error);
         Alert.alert("Error", t("failedToUpdate"));
       }
     },
     [savedData]
   );
-  const handleModalClose = (updatedItems) => {
+  const handleModalClose = async (updatedItems) => {
     if (updatedItems) {
       // Update local state
       setTaskList(updatedItems);
@@ -174,13 +200,34 @@ const Warehouse = ({ route }) => {
         );
         try {
           console.log(updatedItems);
+
+          // Update AsyncStorage
           await AsyncStorage.setItem("items", JSON.stringify(updatedItems));
           setTaskList(updatedItems);
           setFilteredTaskList(updatedItems);
+
+          // Update the API
+          const { id } = route.params.updatedItem;
+          const response = await fetch(
+            `http://192.168.8.101:8080/api/warehouse/items/${id}`,
+            {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(route.params.updatedItem), // Pass the entire object
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error("Failed to update item in database");
+          }
         } catch (error) {
           console.error("Error updating items:", error);
+          Alert.alert("Error", "Failed to update item data");
         }
       };
+
       updateItem();
     }
   }, [route?.params?.updatedItem]);
@@ -209,13 +256,22 @@ const Warehouse = ({ route }) => {
 
   const renderTaskItem = ({ item }) => {
     let backgroundColor;
+
+    // Parse reserved field into a JSON array if it is a string
+    let reservedArray = [];
+    try { 
+    } catch (error) {
+      console.error("Error parsing reserved field:", error);
+    }
+
     if (item.count === 0) {
       backgroundColor = "red"; // Red if count is zero
-    } else if (item.reserved && item.reserved.length > 0 && item.count > 0) {
+    } else if ( item.reserved.length > 0 && item.count > 0 ) {
       backgroundColor = "green"; // Green if item is reserved and has stock
     } else {
       backgroundColor = "#D3D3D3"; // Grey if it has stock but is not reserved
     }
+
     return (
       <TouchableOpacity
         onPress={() =>

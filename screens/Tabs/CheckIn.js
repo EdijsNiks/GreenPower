@@ -75,7 +75,7 @@ const CheckIn = () => {
   const syncProfileWithBackend = async (updatedProfileData) => {
     try {
       const response = await fetch(
-        `http://192.168.8.101:5000/api/profile/${updatedProfileData.id}`,
+        `http://192.168.8.101:8080/api/profile/${updatedProfileData.id}`,
         {
           method: "PUT",
           headers: {

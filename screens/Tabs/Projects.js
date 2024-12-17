@@ -62,7 +62,7 @@ const Projects = () => {
 
   const fetchProjectsFromDB = async () => {
     try {
-      const response = await fetch("http://192.168.8.101:5000/api/project");
+      const response = await fetch("http://192.168.8.101:8080/api/project");
       if (!response.ok) throw new Error("Failed to fetch projects");
 
       const projects = await response.json();

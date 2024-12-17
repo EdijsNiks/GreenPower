@@ -39,7 +39,7 @@ const AddSpotToWarehouse = () => {
         description,
         reservedItems: [],
       };
-      const response = await fetch("http://192.168.8.101:5000/api/spots", {
+      const response = await fetch("http://192.168.8.101:8080/api/spots", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

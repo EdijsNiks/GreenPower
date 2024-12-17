@@ -21,7 +21,7 @@ import { useTranslation } from "react-i18next";
 
 const { width } = Dimensions.get("window");
 
-const API_BASE_URL = "http://192.168.8.101:5000/api/project";
+const API_BASE_URL = "http://192.168.8.101:8080/api/project";
 
 const ProjectsInfo = () => {
   const navigation = useNavigation();
@@ -89,13 +89,16 @@ const ProjectsInfo = () => {
           })
         );
 
+        // Ensure projectPhotos is always an array
+        const currentProjectPhotos = projectPhotos || [];
+
         // Combine existing and new unique photos
         const updatedPhotos = [
-          ...projectPhotos,
+          ...currentProjectPhotos,
           ...processedPhotos.filter(
             (newPhoto) =>
-              !projectPhotos.some(
-                (existingPhoto) => existingPhoto.uri === newPhoto.uri
+              !currentProjectPhotos.some(
+                (existingPhoto) => existingPhoto?.uri === newPhoto.uri
               )
           ),
         ];
@@ -115,7 +118,7 @@ const ProjectsInfo = () => {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ newPhotos: newPhotoUrls }),
           });
-    
+
           if (!response.ok) {
             throw new Error("Failed to add photos to the project.");
           }
@@ -141,11 +144,12 @@ const ProjectsInfo = () => {
           // Update local state and reset temporary photos
           setProjectPhotos(updatedPhotos);
           setTempPhotos([]);
+
+          Alert.alert("Success", "Photos saved successfully!");
         } catch (error) {
           console.error("Error updating AsyncStorage:", error);
+          Alert.alert("Error", "Failed to update project photos.");
         }
-
-        Alert.alert("Success", "Photos saved successfully!");
       } catch (error) {
         console.error("Error saving photos:", error);
         Alert.alert("Error", "Failed to save photos.");
@@ -154,7 +158,6 @@ const ProjectsInfo = () => {
       Alert.alert("No Photos", "Please select some photos before saving.");
     }
   };
-
   const savePhotoToFileSystem = async (uri) => {
     try {
       if (uri.startsWith("file://")) {
@@ -362,16 +365,19 @@ const ProjectsInfo = () => {
             onPhotosChange={setTempPhotos}
             containerStyle={styles.photosSection}
           />
-          <View style={styles.photoGallery}>
-            {Array.isArray(projectPhotos) &&
-              projectPhotos.map((photo, index) => (
-                <TouchableOpacity
-                  key={index}
-                  onPress={() => handleImagePress(photo)}
-                >
-                  <Image source={{ uri: photo.uri }} style={styles.photo} />
-                </TouchableOpacity>
-              ))}
+          <View style={styles.photoGalleryContainer}>
+            <View style={styles.photoGallery}>
+              {Array.isArray(projectPhotos) &&
+                projectPhotos.map((photo, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => handleImagePress(photo)}
+                    style={styles.photoWrapper}
+                  >
+                    <Image source={{ uri: photo.uri }} style={styles.photo} />
+                  </TouchableOpacity>
+                ))}
+            </View>
           </View>
 
           {tempPhotos.length > 0 && (
@@ -513,15 +519,6 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     alignSelf: "flex-end",
     marginBottom: 10,
-  },
-  photoGallery: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  photo: {
-    width: 100,
-    height: 100,
-    backgroundColor: "lightgray",
   },
   navbar: {
     position: "absolute",
@@ -679,6 +676,25 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginHorizontal: 15,
     marginVertical: 10,
+  },
+  photoGalleryContainer: {
+    paddingHorizontal: 10,
+    marginTop: 10,
+  },
+  photoGallery: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
+  photoWrapper: {
+    width: "30%", // Ensures 3 photos per row with some spacing
+    aspectRatio: 1, // Makes photos square
+    marginBottom: 10,
+  },
+  photo: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 8, // Optional: adds rounded corners
   },
 });
 

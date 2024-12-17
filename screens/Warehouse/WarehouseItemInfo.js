@@ -37,6 +37,7 @@ const WarehouseItemInfo = () => {
   );
   const [isEditing, setIsEditing] = useState(false);
   const [tempPhotos, setTempPhotos] = useState([]);
+  const [reservedProjects, setReservedProjects] = useState([]);
 
   const handleSavePhotos = async () => {
     try {
@@ -113,44 +114,66 @@ const WarehouseItemInfo = () => {
       Alert.alert(t("error"), t("failedToUpdateDescription"));
     }
   };
+  
 
-  const loadProjects = async () => {
-    try {
-      const storedProjects = await AsyncStorage.getItem("projects");
-      if (storedProjects) {
-        const parsedProjects = JSON.parse(storedProjects).map((project) => ({
-          ...project,
-          // Ensure reserved is always an array
-          reserved: Array.isArray(project.reserved)
-            ? project.reserved.filter((r) => r && r.itemId)
-            : [],
-        }));
-        setProjects(parsedProjects);
+// Load projects and their reserved information
+const loadProjects = async () => {
+  try {
+    const storedProjects = await AsyncStorage.getItem("projects");
+    if (storedProjects) {
+      const parsedProjects = JSON.parse(storedProjects).map((project) => ({
+        ...project,
+        // Ensure reserved is always an array
+        reserved: Array.isArray(project.reserved)
+          ? project.reserved.filter((r) => r && r.itemId)
+          : [],
+      }));
 
-        // Safely get initial reserved project IDs
-        const initialReservedIds = parsedProjects.reduce((acc, project) => {
-          const hasReservation =
-            Array.isArray(project.reserved) &&
-            project.reserved.some(
-              (item) => item && item.itemId === itemDetails.id
-            );
-          if (hasReservation) {
-            acc.push(project.id);
+      // Check for existing reservations and update the state
+      setProjects((prevProjects) => {
+        const updatedProjects = [...prevProjects];
+        parsedProjects.forEach((newProject) => {
+          const existingProjectIndex = prevProjects.findIndex(
+            (project) => project.id === newProject.id
+          );
+          if (existingProjectIndex !== -1) {
+            updatedProjects[existingProjectIndex] = newProject;
+          } else {
+            updatedProjects.push(newProject);
           }
-          return acc;
-        }, []);
-        setReservedProjectIds(initialReservedIds);
-      }
-    } catch (error) {
-      console.error("Error loading projects:", error);
-      Alert.alert(t("error"), t("failedToLoadProjects"));
-    }
-  };
+        });
+        return updatedProjects;
+      });
 
-  // Use effect to load projects
-  useEffect(() => {
-    loadProjects();
-  }, []);
+      // Safely get initial reserved project IDs
+      const initialReservedIds = parsedProjects.reduce((acc, project) => {
+        const hasReservation =
+          Array.isArray(project.reserved) &&
+          project.reserved.some(
+            (item) => item && item.itemId === itemDetails.id
+          );
+        if (hasReservation) {
+          acc.push(project.id);
+        }
+        return acc;
+      }, []);
+      setReservedProjectIds(initialReservedIds);
+    }
+  } catch (error) {
+    console.error("Error loading projects:", error);
+    Alert.alert(t("error"), t("failedToLoadProjects"));
+  }
+};
+
+// UseEffect hook to load projects when the component mounts
+useEffect(() => {
+  loadProjects();
+}, []);  // Only runs once on mount
+
+// If `itemDetails.id` changes, re-fetch projects (if needed)
+useEffect(() => {
+  loadProjects();
+}, [itemDetails.id]);  // Runs when itemDetails.id changes
 
   const getTotalReservedForItem = (itemId, projectsData) => {
     return projectsData.reduce((sum, project) => {
@@ -219,93 +242,114 @@ const WarehouseItemInfo = () => {
       Alert.alert(t("error"), t("selectProjectAndCount"));
       return;
     }
-
+  
     const reserveAmount = parseInt(reservedCount);
     if (isNaN(reserveAmount) || reserveAmount <= 0) {
       Alert.alert(t("error"), t("enterValidNumber"));
       return;
     }
-
+  
     // Safely find project reservation
     const projectReservation = (selectedProject.reserved || []).find(
       (item) => item && item.itemId === itemDetails.id
     );
-
-    const existingReservedCount = projectReservation
-      ? parseInt(projectReservation.count || 0)
-      : 0;
-
-    if (reserveAmount >= itemDetails.count) {
+    const existingReservedCount = projectReservation ? parseInt(projectReservation.count || 0) : 0;
+  
+    if (reserveAmount + existingReservedCount >= itemDetails.count) {
       Alert.alert(t("error"), t("cannotReserveMoreThanAvailable"));
       return;
     }
-
+  
     try {
-      const updatedProjects = projects.map((project) => {
-        if (project.id === selectedProject.id) {
-          // Ensure reserved is an array
-          const currentReserved = Array.isArray(project.reserved)
-            ? project.reserved
-            : [];
-
-          // Find existing reservation or create new
-          const existingReservationIndex = currentReserved.findIndex(
-            (item) => item && item.itemId === itemDetails.id
-          );
-
-          let newReserved;
-          if (existingReservationIndex !== -1) {
-            // Update existing reservation
-            newReserved = [...currentReserved];
-            newReserved[existingReservationIndex] = {
-              ...newReserved[existingReservationIndex],
-              count:
-                parseInt(newReserved[existingReservationIndex].count || 0) +
-                reserveAmount,
-            };
-          } else {
-            // Add new reservation
-            newReserved = [
-              ...currentReserved,
-              {
-                itemId: itemDetails.id,
-                name: itemDetails.name,
-                count: reserveAmount,
-                projectId: project.id,
-              },
-            ];
-          }
-
-          return { ...project, reserved: newReserved };
+      // Prepare updated reserved array
+      const currentReserved = Array.isArray(selectedProject.reserved) 
+        ? selectedProject.reserved 
+        : [];
+  
+      const existingReservationIndex = currentReserved.findIndex(
+        (item) => item && item.itemId === itemDetails.id
+      );
+  
+      let newReserved;
+      if (existingReservationIndex !== -1) {
+        // Update existing reservation
+        newReserved = [...currentReserved];
+        newReserved[existingReservationIndex] = {
+          ...newReserved[existingReservationIndex],
+          count: parseInt(newReserved[existingReservationIndex].count || 0) + reserveAmount,
+        };
+      } else {
+        // Add new reservation
+        newReserved = [
+          ...currentReserved,
+          {
+            itemId: itemDetails.id,
+            name: itemDetails.name,
+            count: reserveAmount,
+            projectId: selectedProject.id,
+          },
+        ];
+      }
+  
+      // Update via API
+      const response = await fetch(
+        `http://192.168.8.101:8080/api/project/${selectedProject.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ reserved: newReserved }),
         }
-        return project;
-      });
-
+      );
+  
+      if (!response.ok) {
+        console.log(response);
+        throw new Error("Failed to reserve item in database");
+      }
+  
+      const data = await response.json();
+  
+      // Update local projects state
+      const updatedProjects = projects.map((project) =>
+        project.id === selectedProject.id 
+          ? { ...project, reserved: data.reserved } 
+          : project
+      );
+  
+      // Update AsyncStorage
       await AsyncStorage.setItem("projects", JSON.stringify(updatedProjects));
       setProjects(updatedProjects);
-
-      const updatedReservedIds = [
-        ...new Set([...reservedProjectIds, selectedProject.id]),
-      ];
-      setReservedProjectIds(updatedReservedIds);
-
+  
+      // Update item details with full reserved object
       const updatedItem = {
         ...itemDetails,
         count: itemDetails.count - reserveAmount,
-        reserved: updatedReservedIds,
+        reserved: [
+          ...(itemDetails.reserved || []),
+          {
+            itemId: itemDetails.id,
+            name: itemDetails.name,
+            count: reserveAmount,
+            projectId: selectedProject.id,
+          },
+        ],
       };
       setItemDetails(updatedItem);
-
+  
+      // Reset state
       setReservedCount("");
       setSelectedProject(null);
       setShowReserveSection(false);
-
+  
       Alert.alert(t("success"), t("itemReservedSuccessfully"));
     } catch (error) {
       console.error("Error in handleReserveItem:", error);
       Alert.alert(t("error"), t("failedToReserveItem"));
     }
   };
+  
+  
   const handleClearProjectReservation = async (projectId) => {
     Alert.alert(t("clearReservation"), t("whatToDoWithReservation"), [
       { text: t("cancel"), style: "cancel" },
@@ -321,6 +365,18 @@ const WarehouseItemInfo = () => {
               (item) => item.itemId === itemDetails.id
             );
             const reservedCount = reservation ? parseInt(reservation.count) : 0;
+
+          // Delete via API
+          const response = await fetch(
+            `http://192.168.8.101:8080/api/project/${projectId}/reserved/${itemDetails.id}`,
+            {
+              method: "DELETE",
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error("Failed to clear reservation in database");
+          }
 
             const updatedProjects = projects.map((project) => {
               if (project.id === projectId) {

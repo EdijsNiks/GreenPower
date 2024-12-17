@@ -35,26 +35,8 @@ const AddItemToWarehouse = () => {
   const [categories, setCategories] = useState([]); // State to store fetched categories
 
   useEffect(() => {
-    //saveDefaultCategories(); // Save default categories on mount
     fetchCategories(); // Fetch categories from AsyncStorage on mount
   }, []);
-
-  // Save default categories to AsyncStorage if they don't exist
-  /*  const saveDefaultCategories = async () => {
-    const defaultCategories = ["SCREWS", "BOLTS", "METAL SHEETS", "ETC"];
-    try {
-      const storedCategories = await AsyncStorage.getItem("categories");
-      if (!storedCategories) {
-        await AsyncStorage.setItem(
-          "categories",
-          JSON.stringify(defaultCategories)
-        );
-      }
-    } catch (error) {
-      console.error("Error saving default categories:", error);
-    }
-  };
-*/
 
   // Fetch categories from AsyncStorage
   const fetchCategories = async () => {
@@ -121,7 +103,7 @@ const AddItemToWarehouse = () => {
       console.log("Sending item:", newItem);
 
       // Send item to API using fetch
-      const response = await fetch("http://192.168.8.101:5000/api/warehouse/", {
+      const response = await fetch("http://192.168.8.101:8080/api/warehouse/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -160,7 +142,7 @@ const AddItemToWarehouse = () => {
             // Navigate back to warehouse
             navigation.navigate("Main", {
               screen: "Warehouse",
-              params: { newItem },
+              params: { shouldRefresh: true },
             });
           },
         },

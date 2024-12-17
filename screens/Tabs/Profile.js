@@ -7,31 +7,42 @@ import {
   StyleSheet,
   Pressable,
   Platform,
-  Dimensions
+  Dimensions,
+  TouchableOpacity,
+  Alert,
 } from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
 import { useTranslation } from "react-i18next";
 import { AuthContext } from "../../AuthContext";
+import i18next from "../../services/i18next";
+import LanguageSelector from "../../components/Language/languageSelector";
 
 const { width } = Dimensions.get("window");
 
 const Profile = () => {
   const navigation = useNavigation();
   const { t } = useTranslation();
-
   const [userData, setUserData] = useState(null);
   const [isPressed, setIsPressed] = useState(false);
-
   const { logout } = useContext(AuthContext);
+  
+  // Add state to track current language
+  const [currentLanguage, setCurrentLanguage] = useState('');
 
+  // Initialize language on component mount
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  // Rest of the existing methods remain the same...
   const fetchUserData = async () => {
     try {
-      // Retrieve user data from SecureStore
-      const storedUserData = Platform.OS === "web"
-        ? await AsyncStorage.getItem("userData")
-        : await SecureStore.getItemAsync("userData");
+      const storedUserData =
+        Platform.OS === "web"
+          ? await AsyncStorage.getItem("userData")
+          : await SecureStore.getItemAsync("userData");
 
       if (storedUserData) {
         const parsedUserData = JSON.parse(storedUserData);
@@ -43,11 +54,6 @@ const Profile = () => {
     }
   };
 
-  useEffect(() => {
-    fetchUserData();
-  }, []);
-
-  // Add this to refresh data when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       fetchUserData();
@@ -55,7 +61,6 @@ const Profile = () => {
   );
 
   useLayoutEffect(() => {
-    // Hide Header
     navigation.setOptions({
       headerShown: false,
     });
@@ -100,7 +105,8 @@ const Profile = () => {
             {userData.checkedInTime && (
               <View style={styles.checkInDetailsContainer}>
                 <Text style={styles.checkInDetailsText}>
-                  {t("checkInTime")}: {new Date(userData.checkedInTime).toLocaleString()}
+                  {t("checkInTime")}:{" "}
+                  {new Date(userData.checkedInTime).toLocaleString()}
                 </Text>
               </View>
             )}
@@ -131,6 +137,9 @@ const Profile = () => {
         ) : (
           <Text style={styles.profileText}>{t("loading")}</Text>
         )}
+        
+        {/* Choosing Language */}
+          <LanguageSelector/>
       </View>
     </SafeAreaView>
   );
@@ -233,14 +242,13 @@ const styles = StyleSheet.create({
   checkInDetailsContainer: {
     marginTop: 10,
     padding: 10,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: "#f0f0f0",
     borderRadius: 5,
   },
   checkInDetailsText: {
     fontSize: 14,
     marginBottom: 5,
   },
-  
 });
 
 export default Profile;

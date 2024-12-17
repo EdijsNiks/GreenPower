@@ -43,8 +43,8 @@ const FilterModalWarehouse = ({
         // Then fetch from API to sync
         const apiEndpoint =
           screenType === "projects"
-            ? "http://192.168.8.101:5000/api/projectCategory"
-            : "http://192.168.8.101:5000/api/warehouseCategory";
+            ? "http://192.168.8.101:8080/api/projectCategory"
+            : "http://192.168.8.101:8080/api/warehouseCategory";
 
         const response = await fetch(apiEndpoint);
         if (!response.ok) throw new Error("Failed to fetch categories");
@@ -82,8 +82,8 @@ const FilterModalWarehouse = ({
       if (!categoryExists) {
         const apiEndpoint =
           screenType === "projects"
-            ? "http://192.168.8.101:5000/api/projectCategory"
-            : "http://192.168.8.101:5000/api/warehouseCategory";
+            ? "http://192.168.8.101:8080/api/projectCategory"
+            : "http://192.168.8.101:8080/api/warehouseCategory";
 
         // Make POST request to add category
         const response = await fetch(apiEndpoint, {
@@ -148,8 +148,8 @@ const FilterModalWarehouse = ({
 
         const apiEndpoint = 
         screenType === "projects"
-          ? `http://192.168.8.101:5000/api/projectCategory/${categoryName}`
-          : `http://192.168.8.101:5000/api/warehouseCategory/${categoryName}`;
+          ? `http://192.168.8.101:8080/api/projectCategory/${categoryName}`
+          : `http://192.168.8.101:8080/api/warehouseCategory/${categoryName}`;
       
       // Delete by ID
       const deleteResponse = await fetch(apiEndpoint, {

@@ -29,6 +29,8 @@ const Login = () => {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [isPressed, setIsPressed] = useState(false);
   const { login } = useContext(AuthContext);
+    const [currentLanguage, setCurrentLanguage] = useState('');
+  
 
   const changeLng = (lng) => {
     i18next.changeLanguage(lng);
@@ -53,21 +55,11 @@ const Login = () => {
     }
   };
 
-  // Function to change and persist language
-  const changeLanguage = async (lng) => {
-    try {
-      await AsyncStorage.setItem("language", lng); // Save the selected language
-      changeLng(lng); // Apply the language
-    } catch (error) {
-      console.error("Error saving language preference:", error);
-    }
-  };
-
   const togglePasswordVisibility = () => setPasswordVisible(!passwordVisible);
 
   const handleLogin = async () => {
     try {
-      const response = await fetch('http://192.168.8.101:5000/api/profile/login', {
+      const response = await fetch('http://192.168.8.101:8080/api/profile/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -163,37 +155,7 @@ const Login = () => {
         </View>
 
         {/* Choosing Language */}
-        <View style={styles.languageContainer}>
-          <View style={styles.languageButtons}>
-            <TouchableOpacity
-              style={styles.languageButton}
-              onPress={() => {
-                changeLanguage("lv");
-                Alert.alert(t("language"), t("languageChangedMessage"));
-              }}
-            >
-              <Text style={styles.languageButtonText}>Latviešu</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.languageButton}
-              onPress={() => {
-                changeLanguage("en");
-                Alert.alert(t("language"), t("languageChangedMessage"));
-              }}
-            >
-              <Text style={styles.languageButtonText}>English</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.languageButton}
-              onPress={() => {
-                changeLanguage("rus");
-                Alert.alert(t("language"), t("languageChangedMessage"));
-              }}
-            >
-              <Text style={styles.languageButtonText}>Россия</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        <LanguageSelector/>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

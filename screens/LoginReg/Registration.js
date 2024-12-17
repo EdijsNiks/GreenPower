@@ -21,6 +21,7 @@ import i18next, { languageResources } from "../../services/i18next";
 import "react-native-get-random-values"; // Polyfill for random values
 import { v4 as uuidv4 } from "uuid";
 
+
 const Registration = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -34,7 +35,7 @@ const Registration = () => {
   const navigation = useNavigation();
   const { width, height } = Dimensions.get("window");
   const { t } = useTranslation();
-
+  
   const togglePasswordVisibility = () => setPasswordVisible(!passwordVisible);
 
   const changeLng = (lng) => {
@@ -43,8 +44,8 @@ const Registration = () => {
   useEffect(() => {
     initializeLanguage();
   }, []);
-  // Function to change and persist language
 
+  // Initialize language from AsyncStorage
   const initializeLanguage = async () => {
     try {
       const savedLanguage = await AsyncStorage.getItem("language");
@@ -60,24 +61,34 @@ const Registration = () => {
     }
   };
 
-  // Function to change and persist language
-  const changeLanguage = async (lng) => {
+
+
+  const logHistory = async (historyData) => {
+    console.log('Logging history:', historyData);
     try {
-      await AsyncStorage.setItem("language", lng); // Save the selected language
-      changeLng(lng); // Apply the language
+      const response = await fetch('http://192.168.8.101:8080/api/history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({historyData:action, historyData: description}),
+      });
+  
+      if (!response.ok) {
+        console.log('Failed to log history:', response)
+        console.error('Failed to log history:', await response.json());
+      }
     } catch (error) {
-      console.error("Error saving language preference:", error);
+      console.error('Error logging history:', error);
     }
   };
 
   const validateEmail = (email) => {
-    // Ensure email has an "@" symbol and is at least 5 characters long
     const emailPattern = /.+@.+\..+/;
     return email.length >= 5 && emailPattern.test(email);
   };
 
   const validatePassword = (password) => {
-    // Ensure password is at least 5 characters long and contains at least one digit
     const passwordPattern = /^(?=.*\d).{5,}$/;
     return passwordPattern.test(password);
   };
@@ -110,17 +121,27 @@ const Registration = () => {
         password,
         admin,
       };
-  
+
       try {
-        const response = await fetch('http://192.168.8.101:5000/api/profile', {
-          method: 'POST',
+        const response = await fetch("http://192.168.8.101:8080/api/profile", {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify(userProfile),
         });
-  
+
         if (response.ok) {
+          const createdUser = await response.json(); // Assume the created user is returned in response
+
+          // Log history for successful registration
+          const historyData = {
+            action: "User Registration",
+            description: `User ${userProfile.name} registered successfully.`,
+          };
+          
+          await logHistory(historyData);
+
           Alert.alert("Success", t("registerSuccess"), [
             { text: "OK", onPress: () => navigation.replace("Login") },
           ]);
@@ -134,7 +155,7 @@ const Registration = () => {
       }
     }
   };
-  
+
   return (
     <SafeAreaView
       style={{ flex: 1, backgroundColor: "white", alignItems: "center" }}
@@ -230,37 +251,7 @@ const Registration = () => {
         </View>
 
         {/* Choosing Language */}
-        <View style={styles.languageContainer}>
-          <View style={styles.languageButtons}>
-            <TouchableOpacity
-              style={styles.languageButton}
-              onPress={() => {
-                changeLanguage("lv");
-                Alert.alert(t("language"), t("languageChangedMessage"));
-              }}
-            >
-              <Text style={styles.languageButtonText}>Latviešu</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.languageButton}
-              onPress={() => {
-                changeLanguage("en");
-                Alert.alert(t("language"), t("languageChangedMessage"));
-              }}
-            >
-              <Text style={styles.languageButtonText}>English</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.languageButton}
-              onPress={() => {
-                changeLanguage("rus");
-                Alert.alert(t("language"), t("languageChangedMessage"));
-              }}
-            >
-              <Text style={styles.languageButtonText}>Россия</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        <LanguageSelector/>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

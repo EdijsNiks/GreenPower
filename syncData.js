@@ -6,7 +6,7 @@ const syncData = async () => {
     const lastSync = JSON.parse(await AsyncStorage.getItem("lastSync")) || {};
 
     // Fetch updated data from the server
-    const response = await fetch("http://192.168.8.101:5000/api/sync", {
+    const response = await fetch("http://192.168.8.101:8080/api/sync", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ lastSync }),

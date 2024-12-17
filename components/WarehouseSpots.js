@@ -120,15 +120,15 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, onSave }) => {
   const handleSaveAndClose = async () => {
     try {
       setSaving(true);
-
+  
       const [itemsData, spotsData] = await Promise.all([
         AsyncStorage.getItem("items"),
         AsyncStorage.getItem("spots"),
       ]);
-
+  
       let allItems = itemsData ? JSON.parse(itemsData) : [];
       let spots = spotsData ? JSON.parse(spotsData) : [];
-
+  
       const updatedSpots = spots.map((spot) => {
         if (spot.spotId === spotId) {
           return {
@@ -141,7 +141,7 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, onSave }) => {
         }
         return spot;
       });
-
+  
       const updatedAllItems = allItems.map((item) => {
         const spotItem = spotItems.find((si) => si.id === item.id);
         if (spotItem) {
@@ -155,12 +155,39 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, onSave }) => {
         }
         return item;
       });
-
+  
+      // Update AsyncStorage
       await Promise.all([
         AsyncStorage.setItem("spots", JSON.stringify(updatedSpots)),
         AsyncStorage.setItem("items", JSON.stringify(updatedAllItems)),
       ]);
-
+  
+      // Update API
+      for (const item of spotItems) {
+        try {
+          const response = await fetch(
+            `http://192.168.8.101:8080/api/warehouse/items/${item.id}`,
+            {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                id: item.id,
+                count: itemCountUpdates[item.id] || item.count || 0,
+                name: item.name,
+              }),
+            }
+          );
+          if (!response.ok) {
+            throw new Error(`Failed to update item ${item.id}`);
+          }
+        } catch (error) {
+          console.error(`Error updating item ${item.id} in API:`, error);
+        }
+      }
+  
+      // Notify parent and close
       onSave(
         spotItems.map((item) => ({
           id: item.id,
@@ -168,7 +195,7 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, onSave }) => {
           name: item.name,
         }))
       );
-
+  
       onClose(updatedAllItems);
     } catch (error) {
       console.error("Error saving spot data:", error);
@@ -177,18 +204,18 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, onSave }) => {
       setSaving(false);
     }
   };
-
+  
   const handleAddItem = async (selectedItem) => {
     try {
       if (!selectedItem?.id) {
         throw new Error("Invalid item selected");
       }
-
+  
       const spotsData = await AsyncStorage.getItem("spots");
       let spots = spotsData ? JSON.parse(spotsData) : [];
-
+  
       const spotIndex = spots.findIndex((spot) => spot.spotId === spotId);
-
+  
       if (spotIndex === -1) {
         spots.push({
           spotId,
@@ -210,9 +237,11 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, onSave }) => {
           ],
         };
       }
-
+  
+      // Update AsyncStorage
       await AsyncStorage.setItem("spots", JSON.stringify(spots));
-
+  
+      // Update State
       setSpotItems((prev) => [
         ...prev,
         { ...selectedItem, count: selectedItem.count },
@@ -223,11 +252,33 @@ const WarehouseSpots = ({ isVisible, spotId, onClose, onSave }) => {
       setShowItemSelector(false);
       setSearchQuery("");
       setHasChanges(true);
+  
+      // Update API
+      const spotToUpdate = spots.find(spot => spot.spotId === spotId);
+      const response = await fetch(`http://192.168.8.101:8080/api/spots/${spotToUpdate.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          description: spotToUpdate.description || "", // Provide a default value if `description` is not present
+          reservedItems: spotToUpdate.items.map((item) => ({
+            id: item.itemId,
+            count: item.count,
+          })),
+        }),
+      });
+  
+      if (!response.ok) {
+        console.log(response);
+        throw new Error("Failed to update spot in database");
+      }
     } catch (error) {
       console.error("Error adding item:", error);
       Alert.alert("Error", "Failed to add item");
     }
   };
+  
 
   const handleRemoveItem = async (itemId) => {
     if (!itemId) return;
