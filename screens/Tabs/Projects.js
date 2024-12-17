@@ -3,6 +3,7 @@ import React, {
   useState,
   useCallback,
   useEffect,
+  useContext
 } from "react";
 import {
   StyleSheet,
@@ -25,6 +26,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import FilterModalWarehouse from "../../components/FilterModalWarehouse";
 import { useTranslation } from "react-i18next";
+
+import TranslatableText from "../../components/Language/translatableText";
 
 const { width } = Dimensions.get("window");
 
@@ -167,7 +170,7 @@ const Projects = () => {
     applyFilters(originalTaskList, searchQuery, newSelectedCategories);
     setFilterModalVisible(false);
   };
-
+  
   const renderTaskItem = ({ item }) => (
     <TouchableOpacity
       onPress={() =>
@@ -177,7 +180,7 @@ const Projects = () => {
       <View style={styles.taskItem}>
         <View style={styles.taskLeft}>
           <View style={styles.taskCircle}></View>
-          <Text style={styles.taskTitle}>{item.name}</Text>
+          <TranslatableText style={styles.taskTitle} text={item.name} fallbackText={item.name} />
         </View>
       </View>
     </TouchableOpacity>

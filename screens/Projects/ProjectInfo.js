@@ -23,6 +23,9 @@ const { width } = Dimensions.get("window");
 
 const API_BASE_URL = "http://192.168.8.101:8080/api/project";
 
+import TranslatableText from "../../components/Language/translatableText";
+
+
 const ProjectsInfo = () => {
   const navigation = useNavigation();
   const { t } = useTranslation();
@@ -256,7 +259,7 @@ const ProjectsInfo = () => {
 
   // Render project details if project exists
   if (!project) {
-    return <Text>No project data available</Text>;
+    return <TranslatableText>No project data available</TranslatableText>;
   }
 
   // Static data for reserved items based on the newItem model
@@ -279,7 +282,7 @@ const ProjectsInfo = () => {
       {/* Navbar */}
       <View style={styles.navbar}>
         <Image source={require("../../assets/logo1.png")} style={styles.logo} />
-        <Text style={styles.screenName}>PROJECT INFO</Text>
+        <Text style={styles.screenName}>{t("infoProject")}</Text>
       </View>
 
       <View style={styles.backButtonContainer}></View>
@@ -287,13 +290,15 @@ const ProjectsInfo = () => {
         {/* Project Info Section */}
         <View style={styles.projectInfo}>
           <Text style={styles.infoText}>
-            {t("name")}: {project.name}
+            {t("name")}: 
+            <TranslatableText style={styles.infoText} text={project.name} fallbackText={project.name} />
           </Text>
           <Text style={styles.infoText}>
-            {t("category")}: {project.category}
+            {t("category")}: 
+            <TranslatableText style={styles.infoText} text={project.category} fallbackText={project.category} />
           </Text>
           <Text style={styles.infoText}>
-            {t("createdAt")}: {project.dateCreated}
+            {t("createdAt")}: {project.createdAt}
           </Text>
           <TouchableOpacity
             style={styles.deleteButton}
@@ -353,9 +358,11 @@ const ProjectsInfo = () => {
               placeholder={t("enterDescription")}
             />
           ) : (
-            <Text style={styles.descriptionText}>
-              {projectData.description || t("noDescriptionAvailable")}
-            </Text>
+            <TranslatableText
+              style={styles.descriptionText}
+              text={project.description}
+              fallbackText={project.description}
+            /> || t("noDescription")
           )}
         </View>
         {/* Photos Section */}

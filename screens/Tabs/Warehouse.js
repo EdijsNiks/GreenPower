@@ -22,6 +22,8 @@ import QRCodeScanner from "../../components/QRCodeScanner";
 import styles from "../../styles/WarehouseStyles.js";
 import WarehouseSpots from "../../components/WarehouseSpots.js";
 import { useTranslation } from "react-i18next";
+import TranslatableText from "../../components/Language/translatableText";
+
 
 const Warehouse = ({ route }) => {
   const navigation = useNavigation();
@@ -279,7 +281,7 @@ const Warehouse = ({ route }) => {
         }
       >
         <View style={[styles.taskItem, { backgroundColor }]}>
-          <Text style={styles.taskTitle}>{item.name}</Text>
+          <TranslatableText style={styles.taskTitle} text={item.name} fallbackText={item.name} />
           <Text>
             {t("count")}: {item.count}
           </Text>

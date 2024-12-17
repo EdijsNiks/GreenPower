@@ -15,6 +15,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import styles from "../../styles/WarehouseItemInfoStyles.js";
 import { useTranslation } from "react-i18next";
 import PhotoPicker from "../../components/PhotoPicker.js";
+import TranslatableText from "../../components/Language/translatableText";
+
 
 const WarehouseItemInfo = () => {
   const navigation = useNavigation();
@@ -521,10 +523,12 @@ useEffect(() => {
       <ScrollView style={styles.scrollContainer}>
         <View style={styles.itemInfoContainer}>
           <Text style={styles.itemName}>
-            {t("name")}: {itemDetails?.name || t("na")}
+            {t("name")}:
+            <TranslatableText text={itemDetails?.name || t("na")} fallbackText={itemDetails?.name || t("na")}/> 
           </Text>
           <Text style={styles.itemDetails}>
-            {t("category")}: {itemDetails?.category || t("na")}
+            {t("category")}: 
+             <TranslatableText text={itemDetails?.category || t("na")} fallbackText={itemDetails?.category || t("na")} />
           </Text>
           <Text style={styles.itemDetails}>
             {t("totalCount")}: {itemDetails?.count || t("na")}
@@ -549,7 +553,8 @@ useEffect(() => {
                   style={styles.reservationItem}
                 >
                   <Text style={styles.reservationText}>
-                    {reservation.projectTitle}: {reservation.count} {t("items")}
+                    <TranslatableText text={reservation.projectName} fallbackText={reservation.projectName} />
+                    : {reservation.count} {t("items")}
                   </Text>
                   <TouchableOpacity
                     style={styles.clearReservationButton}
@@ -577,9 +582,11 @@ useEffect(() => {
               multiline
             />
           ) : (
-            <Text style={styles.descriptionText}>
-              {itemDetails?.description || t("noDescriptionAvailable")}
-            </Text>
+            <TranslatableText
+              text={itemDetails?.description || t("noDescriptionAvailable")}  
+              fallbackText={itemDetails?.description || t("noDescriptionAvailable")}
+              style={styles.descriptionText}
+            />
           )}
         </View>
 

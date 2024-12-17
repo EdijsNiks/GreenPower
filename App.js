@@ -5,6 +5,9 @@ import syncData from "./syncData";
 
 import i18next from "./services/i18next";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { LanguageProvider } from "./LanguageProvider";
+
+import ErrorBoundary from "./errorBoundary";
 
 const App = () => {
   useEffect(() => {
@@ -54,9 +57,13 @@ const App = () => {
   };
 
   return (
-    <AuthProvider>
-      <StackNavigation />
-    </AuthProvider>
+    <ErrorBoundary>
+      <LanguageProvider>
+        <AuthProvider>
+          <StackNavigation />
+        </AuthProvider>
+      </LanguageProvider>
+    </ErrorBoundary>
   );
 };
 

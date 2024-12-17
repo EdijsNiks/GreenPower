@@ -27,9 +27,6 @@ const Profile = () => {
   const [userData, setUserData] = useState(null);
   const [isPressed, setIsPressed] = useState(false);
   const { logout } = useContext(AuthContext);
-  
-  // Add state to track current language
-  const [currentLanguage, setCurrentLanguage] = useState('');
 
   // Initialize language on component mount
   useEffect(() => {

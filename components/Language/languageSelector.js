@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   View,
   Text,
@@ -9,17 +9,20 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import i18next from "../../services/i18next";
 import { useTranslation } from "react-i18next";
+import { LanguageContext } from "../../LanguageProvider";
 
 // Define language options
 const LANGUAGE_OPTIONS = [
   { code: "lv", name: "Latviešu" },
   { code: "en", name: "English" },
-  { code: "rus", name: "Россия" }
+  { code: "ru", name: "Россия" }
 ];
 
 const LanguageSelector = () => {
   const [currentLanguage, setCurrentLanguage] = useState('');
   const { t } = useTranslation();
+  const { changeLanguageDynamic } = useContext(LanguageContext);
+
 
   // Initialize language on component mount
   useEffect(() => {
@@ -65,7 +68,7 @@ const LanguageSelector = () => {
               styles.languageButton, 
               currentLanguage === language.code && styles.selectedLanguageButton
             ]}
-            onPress={() => changeLanguage(language.code)}
+            onPress={() => {changeLanguage(language.code), changeLanguageDynamic(language.code)}}
           >
             <Text 
               style={[
